@@ -6,25 +6,15 @@
 
 def read_communication_content():
     """
-    读取communication.md文件，返回第二个三级标题之后的所有内容
+    读取communication.md文件，返回整个文件的内容
     
     Returns:
-        第二个三级标题之后的内容
+        整个文件的内容
     """
     try:
         with open('communication.md', 'r', encoding='utf-8') as f:
             content = f.read()
-        
-        # 分割内容，找到所有三级标题
-        sections = content.split('### ')
-        
-        # 如果有至少三个部分（包括空字符串），则返回第二个三级标题之后的内容
-        if len(sections) >= 3:
-            # 重新组合内容，从第二个三级标题开始
-            result = '### '.join(sections[2:])
-            return result
-        else:
-            return ""
+        return content
     except FileNotFoundError:
         return ""
 
