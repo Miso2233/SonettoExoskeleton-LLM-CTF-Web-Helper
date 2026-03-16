@@ -33,7 +33,9 @@ def write_to_communication(content, title="模型回复"):
 def clear_communication_file():
     """
     清空communication.md文件
+    如果文件不存在，自动创建
     """
+    # 无论文件是否存在，使用'w'模式都会创建或截断文件
     with open('communication.md', 'w', encoding='utf-8') as f:
         f.write('')
 
