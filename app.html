@@ -41,8 +41,15 @@
         // 读取和解析communication.md文件
         async function loadCommunicationFile() {
             try {
-                // 发送HEAD请求获取文件修改时间
-                const headResponse = await fetch('communication.md', { method: 'HEAD' });
+                // 发送HEAD请求获取文件修改时间，添加缓存控制
+                const headResponse = await fetch('communication.md', { 
+                    method: 'HEAD',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 if (!headResponse.ok) {
                     throw new Error('无法读取文件信息');
                 }
@@ -59,7 +66,14 @@
                 // 文件有变化，更新修改时间并加载内容
                 lastModifiedTime = currentModified;
                 
-                const response = await fetch('communication.md');
+                // 发送GET请求获取文件内容，添加缓存控制
+                const response = await fetch('communication.md', {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 if (!response.ok) {
                     throw new Error('无法读取文件');
                 }
