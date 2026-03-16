@@ -3,6 +3,15 @@
 
 该模块包含与文件操作相关的函数，主要用于处理communication.md和soul.md文件的读写操作。
 """
+import json
+
+class MODES:
+    BOOST = "boost"
+    COACH = "coach"
+    COPILOT = "copilot"
+    FULL_POWER = "full_power"
+
+DEFAULT_MODE = json.load(open('config.json', 'r', encoding='utf-8'))['mode']
 
 def read_communication_content():
     """
@@ -39,12 +48,26 @@ def clear_communication_file():
     with open('communication.md', 'w', encoding='utf-8') as f:
         f.write('')
 
-def read_soul_content():
+def read_soul_content(mode=DEFAULT_MODE):
     """
     读取soul.md文件内容
-    
+
+    Args:
+        mode: 模式，可选值：boost、coach、copilot、full_power
+
     Returns:
         soul.md文件的内容
     """
-    with open('soul.md', 'r', encoding='utf-8') as f:
-        return f.read()
+    out = ""
+    with open('soul/soul.md', 'r', encoding='utf-8') as f:
+        out += f.read()
+    match mode:
+        case MODES.BOOST:
+            out += open('soul/boost.md', 'r', encoding='utf-8').read()
+        case MODES.COACH:
+            out += open('soul/coach.md', 'r', encoding='utf-8').read()
+        case MODES.COPILOT:
+            out += open('soul/copilot.md', 'r', encoding='utf-8').read()
+        case MODES.FULL_POWER:
+            out += open('soul/full_power.md', 'r', encoding='utf-8').read()
+    return out

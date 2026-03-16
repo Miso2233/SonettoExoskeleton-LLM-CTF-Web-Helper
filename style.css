@@ -145,6 +145,37 @@ body::before {
     border-radius: 1px;
 }
 
+/* Sonetto信息栏 */
+.sonetto-info {
+    display: flex;
+    flex-direction: row;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: var(--transition-normal);
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.sonetto-info:hover {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+.info-value {
+    color: var(--color-gray-700);
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--border-radius-sm);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 0.9rem;
+}
+
 /* 内容区域 */
 .content-area {
     flex: 1;
