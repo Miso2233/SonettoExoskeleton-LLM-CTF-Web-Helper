@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sonetto CTF Web 解题助手</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧栏：显示下一步内容 -->
+        <div class="panel left-panel">
+            <h2 class="panel-title">Sonetto</h2>
+            <div class="content-area">
+                <div id="next-step-content" class="markdown-content">
+                    加载中...
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧栏：输入区域 -->
+        <div class="panel right-panel">
+            <h2 class="panel-title">You</h2>
+            <div class="content-area">
+                <div id="input-sections">
+                    加载中...
+                </div>
+                <!-- 按钮区域 -->
+                <div class="button-container">
+                    <button id="next-btn" class="btn btn-primary">下一步</button>
+                    <button id="exit-btn" class="btn btn-danger">结束</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 保存上次文件修改时间
+        let lastModifiedTime = 0;
+
+        // 读取和解析communication.md文件
+        async function loadCommunicationFile() {
+            try {
+                // 发送HEAD请求获取文件修改时间
+                const headResponse = await fetch('communication.md', { method: 'HEAD' });
+                if (!headResponse.ok) {
+                    throw new Error('无法读取文件信息');
+                }
+                
+                // 获取文件修改时间
+                const currentModified = new Date(headResponse.headers.get('Last-Modified')).getTime();
+                
+                // 如果文件没有变化，不更新页面
+                if (currentModified === lastModifiedTime) {
+                    console.log('文件未变化，跳过刷新');
+                    return;
+                }
+                
+                // 文件有变化，更新修改时间并加载内容
+                lastModifiedTime = currentModified;
+                
+                const response = await fetch('communication.md');
+                if (!response.ok) {
+                    throw new Error('无法读取文件');
+                }
+                const content = await response.text();
+                parseCommunicationContent(content);
+            } catch (error) {
+                // 如果文件不存在，尝试创建文件
+                if (error.message.includes('404') || error.message.includes('无法读取文件信息')) {
+                    console.log('communication.md文件不存在，尝试创建...');
+                    await createCommunicationFile();
+                    // 重新尝试加载文件
+                    await loadCommunicationFile();
+                } else {
+                    document.getElementById('next-step-content').textContent = '错误：无法加载communication.md文件';
+                    document.getElementById('input-sections').textContent = '请确保communication.md文件存在';
+                    console.error('加载文件错误:', error);
+                }
+            }
+        }
+
+        // 解析communication.md内容
+        function parseCommunicationContent(content) {
+            // 保存用户输入的内容
+            const userInputs = {};
+            const existingTextareas = document.querySelectorAll('.input-textarea');
+            existingTextareas.forEach(textarea => {
+                userInputs[textarea.id] = textarea.value;
+            });
+            
+            // 分割内容，找到所有三级标题
+            const sections = content.split('### ');
+            
+            // 找到"下一步"部分
+            let nextStepContent = '';
+            let foundNextStep = false;
+            const inputSections = [];
+
+            for (const section of sections) {
+                if (section.startsWith('下一步')) {
+                    // 提取"下一步"内容
+                    nextStepContent = section.substring(3).trim();
+                    foundNextStep = true;
+                } else if (foundNextStep && section.trim()) {
+                    // 提取后续的三级标题及其内容
+                    const lines = section.split('\n');
+                    const title = lines[0].trim();
+                    inputSections.push(title);
+                }
+            }
+
+            // 显示"下一步"内容
+            document.getElementById('next-step-content').textContent = nextStepContent;
+
+            // 生成输入区域
+            const inputSectionsContainer = document.getElementById('input-sections');
+            inputSectionsContainer.innerHTML = '';
+
+            if (inputSections.length === 0) {
+                inputSectionsContainer.innerHTML = '<p>没有需要输入的内容</p>';
+            } else {
+                inputSections.forEach(title => {
+                    const sectionDiv = document.createElement('div');
+                    sectionDiv.className = 'input-section';
+                    
+                    const label = document.createElement('label');
+                    label.className = 'input-label';
+                    label.textContent = title;
+                    
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'input-textarea';
+                    const textareaId = `input-${title.toLowerCase().replace(/\s+/g, '-')}`;
+                    textarea.id = textareaId;
+                    
+                    // 恢复用户输入的内容
+                    if (userInputs[textareaId]) {
+                        textarea.value = userInputs[textareaId];
+                    }
+                    
+                    sectionDiv.appendChild(label);
+                    sectionDiv.appendChild(textarea);
+                    inputSectionsContainer.appendChild(sectionDiv);
+                });
+            }
+        }
+
+        // 创建communication.md文件
+        async function createCommunicationFile() {
+            try {
+                // 创建初始内容
+                const initialContent = `# CTF Web 解题助手 - 会话开始
+
+## 欢迎使用 Sonetto CTF Web 解题助手
+
+### 下一步
+请点击"下一步"按钮开始解题过程。
+
+### 用户输入
+在这里输入你的解题思路或问题。
+
+---
+*会话已开始，请按照提示进行操作。*`;
+                
+                // 使用PUT请求创建文件
+                const response = await fetch('communication.md', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'text/plain; charset=utf-8'
+                    },
+                    body: initialContent
+                });
+                
+                if (!response.ok) {
+                    throw new Error('无法创建文件');
+                }
+                
+                console.log('communication.md文件创建成功');
+            } catch (error) {
+                console.error('创建文件错误:', error);
+                throw error;
+            }
+        }
+
+        // 初始化
+        window.onload = function() {
+            loadCommunicationFile();
+            
+            // 定期检查文件更新
+            setInterval(loadCommunicationFile, 5000); // 每5秒检查一次
+        };
+
+        // 下一步按钮点击事件
+        document.getElementById('next-btn').addEventListener('click', function() {
+            // 收集所有输入内容
+            const inputElements = document.querySelectorAll('.input-textarea');
+            const inputs = {};
+            
+            inputElements.forEach(element => {
+                const id = element.id;
+                const value = element.value;
+                inputs[id] = value;
+            });
+            
+            // 构建输入内容
+            let inputContent = '';
+            inputElements.forEach(element => {
+                const label = element.previousElementSibling.textContent;
+                const value = element.value;
+                inputContent += `### ${label}\n${value}\n\n`;
+            });
+            
+            // 将输入内容写入communication.md文件
+            fetch('communication.md', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'text/plain'
+                },
+                body: inputContent
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('输入内容已写入communication.md');
+                    alert('已提交输入内容，请等待模型处理');
+                } else {
+                    console.error('写入文件失败:', response.status);
+                    alert('写入文件失败，请手动将输入内容复制到后端终端');
+                }
+            })
+            .catch(error => {
+                console.error('写入文件时发生错误:', error);
+                alert('写入文件时发生错误，请手动将输入内容复制到后端终端');
+            });
+        });
+
+        // 结束按钮点击事件
+        document.getElementById('exit-btn').addEventListener('click', function() {
+            if (confirm('确定要结束会话吗？')) {
+                // 向communication.md文件写入退出标记
+                fetch('communication.md', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: '### 退出标记\nEXIT_SESSION\n'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('退出标记已写入communication.md');
+                        alert('会话结束指令已发送，请等待writeup生成');
+                    } else {
+                        console.error('写入文件失败:', response.status);
+                        alert('写入文件失败，请手动在终端输入"退出"');
+                    }
+                })
+                .catch(error => {
+                    console.error('写入文件时发生错误:', error);
+                    alert('写入文件时发生错误，请手动在终端输入"退出"');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
