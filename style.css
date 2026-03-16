@@ -54,14 +54,15 @@
 body {
     font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
     line-height: 1.6;
-    background: linear-gradient(135deg, var(--color-cream-50) 0%, var(--color-cream-500) 100%);
+    background: url('pic/bg.jpg') no-repeat center center fixed;
+    background-size: cover;
     color: var(--color-gray-900);
     min-height: 100vh;
     overflow-x: hidden;
     position: relative;
 }
 
-/* 背景插画元素 */
+/* 背景叠加层 */
 body::before {
     content: '';
     position: fixed;
@@ -69,21 +70,7 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: 
-        radial-gradient(circle at 20% 80%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
-        linear-gradient(45deg, transparent 49%, rgba(0, 0, 0, 0.015) 50%, transparent 51%),
-        linear-gradient(-45deg, transparent 49%, rgba(0, 0, 0, 0.015) 50%, transparent 51%);
-    background-size: 
-        300px 300px,
-        400px 400px,
-        60px 60px,
-        60px 60px;
-    background-position: 
-        10% 10%,
-        90% 90%,
-        0 0,
-        0 0;
+    background: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.4));
     z-index: -1;
     pointer-events: none;
 }
