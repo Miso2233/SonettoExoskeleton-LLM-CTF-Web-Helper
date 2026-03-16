@@ -41,30 +41,39 @@
         // 读取和解析communication.md文件
         async function loadCommunicationFile() {
             try {
+                // 添加时间戳参数，确保每次请求都获取最新文件
+                const timestamp = new Date().getTime();
+                
                 // 发送HEAD请求获取文件修改时间
-                const headResponse = await fetch('communication.md', { method: 'HEAD' });
+                const headResponse = await fetch(`communication.md?timestamp=${timestamp}`, { method: 'HEAD' });
                 if (!headResponse.ok) {
                     throw new Error('无法读取文件信息');
                 }
                 
                 // 获取文件修改时间
-                const currentModified = new Date(headResponse.headers.get('Last-Modified')).getTime();
+                const lastModifiedHeader = headResponse.headers.get('Last-Modified');
+                const currentModified = lastModifiedHeader ? new Date(lastModifiedHeader).getTime() : Date.now();
                 
-                // 如果文件没有变化，不更新页面
-                if (currentModified === lastModifiedTime) {
+                // 只有当文件修改时间发生变化时才更新页面
+                if (currentModified !== lastModifiedTime) {
+                    // 获取文件内容
+                    const response = await fetch(`communication.md?timestamp=${timestamp}`);
+                    if (!response.ok) {
+                        throw new Error('无法读取文件');
+                    }
+                    
+                    const content = await response.text();
+                    
+                    // 更新页面内容
+                    parseCommunicationContent(content);
+                    
+                    // 更新修改时间
+                    lastModifiedTime = currentModified;
+                    
+                    console.log('文件内容已更新，修改时间:', new Date(currentModified).toLocaleString());
+                } else {
                     console.log('文件未变化，跳过刷新');
-                    return;
                 }
-                
-                // 文件有变化，更新修改时间并加载内容
-                lastModifiedTime = currentModified;
-                
-                const response = await fetch('communication.md');
-                if (!response.ok) {
-                    throw new Error('无法读取文件');
-                }
-                const content = await response.text();
-                parseCommunicationContent(content);
             } catch (error) {
                 // 如果文件不存在，尝试创建文件
                 if (error.message.includes('404') || error.message.includes('无法读取文件信息')) {
@@ -78,6 +87,61 @@
                     console.error('加载文件错误:', error);
                 }
             }
+        }
+
+        // Markdown渲染函数
+        function renderMarkdown(text) {
+            if (!text) return '';
+            
+            // 处理标题
+            text = text.replace(/^#{1} (.*$)/gm, '<h1>$1</h1>');
+            text = text.replace(/^#{2} (.*$)/gm, '<h2>$2</h2>');
+            text = text.replace(/^#{3} (.*$)/gm, '<h3>$3</h3>');
+            text = text.replace(/^#{4} (.*$)/gm, '<h4>$4</h4>');
+            text = text.replace(/^#{5} (.*$)/gm, '<h5>$5</h5>');
+            text = text.replace(/^#{6} (.*$)/gm, '<h6>$6</h6>');
+            
+            // 处理粗体和斜体
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
+            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+            
+            // 处理链接
+            text = text.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            
+            // 处理图片
+            text = text.replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 10px 0;">');
+            
+            // 处理代码块
+            text = text.replace(/```([\s\S]*?)```/g, '<pre style="background: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px; overflow-x: auto; margin: 10px 0;"><code>$1</code></pre>');
+            
+            // 处理行内代码
+            text = text.replace(/`([^`]+)`/g, '<code style="background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 3px;">$1</code>');
+            
+            // 处理无序列表
+            text = text.replace(/^\* (.*$)/gm, '<li>$1</li>');
+            text = text.replace(/^\- (.*$)/gm, '<li>$1</li>');
+            text = text.replace(/^\+ (.*$)/gm, '<li>$1</li>');
+            text = text.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+            
+            // 处理有序列表
+            text = text.replace(/^\d+\. (.*$)/gm, '<li>$1</li>');
+            text = text.replace(/(<li>.*<\/li>)/gs, '<ol>$1</ol>');
+            
+            // 处理引用
+            text = text.replace(/^> (.*$)/gm, '<blockquote style="border-left: 3px solid rgba(0,0,0,0.2); padding-left: 10px; margin: 10px 0;">$1</blockquote>');
+            
+            // 处理分割线
+            text = text.replace(/^---$/gm, '<hr style="border: none; border-top: 1px solid rgba(0,0,0,0.2); margin: 20px 0;">');
+            
+            // 处理段落
+            text = text.replace(/^(?!<h[1-6]>)(?!<ul>)(?!<ol>)(?!<li>)(?!<blockquote>)(?!<pre>)(?!<hr>)(.*$)/gm, '<p>$1</p>');
+            
+            // 处理空行
+            text = text.replace(/<p><\/p>/g, '');
+            
+            return text;
         }
 
         // 解析communication.md内容
@@ -110,8 +174,9 @@
                 }
             }
 
-            // 显示"下一步"内容
-            document.getElementById('next-step-content').textContent = nextStepContent;
+            // 显示"下一步"内容（使用Markdown渲染）
+            const renderedContent = renderMarkdown(nextStepContent);
+            document.getElementById('next-step-content').innerHTML = renderedContent;
 
             // 生成输入区域
             const inputSectionsContainer = document.getElementById('input-sections');
@@ -184,6 +249,10 @@
 
         // 初始化
         window.onload = function() {
+            // 首次加载时，强制刷新文件内容
+            console.log('页面加载完成，开始加载communication.md文件');
+            
+            // 立即加载文件
             loadCommunicationFile();
             
             // 定期检查文件更新
