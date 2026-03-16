@@ -46,5 +46,5 @@ def read_soul_content():
     Returns:
         soul.md文件的内容
     """
-    with open('soul.md', 'r', encoding='utf-8') as f:
+    with open('soul/soul.md', 'r', encoding='utf-8') as f:
         return f.read()
