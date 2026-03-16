@@ -1,6 +1,6 @@
 {
   "api_key": "your_api_key_here",
   "base_url": "https://api.deepseek.com/v1",
-  "modes_example": ["Coach", "Copilot", "Boost", "FULL-POWER"],
-  "mode": "Copilot"
+  "modes_example": ["coach", "copilot", "boost", "full_power"],
+  "mode": "copilot"
 }
