@@ -66,7 +66,7 @@ class Sonetto:
             model="deepseek-chat",  # 使用DeepSeek的聊天模型
             messages=self.conversation_history,
             temperature=0.7,
-            max_tokens=1024
+            max_tokens=2048
         )
         
         # 提取回复内容
