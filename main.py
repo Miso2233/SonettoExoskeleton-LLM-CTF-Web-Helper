@@ -6,8 +6,8 @@ Sonetto CTF Web 解题助手
 
 import os
 import time
-from src.deepseek_client import Model
-from src.file_utils import read_communication_content, write_to_communication, clear_communication_file
+from src.deepseek_client import Sonetto
+from src.file_utils import communication_manager
 
 def main():
     print("=== Sonetto CTF Web 解题助手 ===")
@@ -16,17 +16,17 @@ def main():
     print("\n初始化会话中...")
     
     # 清空communication.md文件
-    clear_communication_file()
+    communication_manager.clear()
     
-    # 实例化Model类
-    model = Model()
+    # 实例化Sonetto类
+    sonetto = Sonetto()
     
     # 初始化会话
-    session_response = model.begin_session()
+    session_response = sonetto.begin_session()
     print("\n会话初始化完成")
     
     # 将模型回复写入communication.md
-    write_to_communication(session_response)
+    communication_manager.write(session_response)
     
     # 开始交互循环
     # 记录communication.md的初始修改时间
@@ -53,7 +53,7 @@ def main():
                     print("\n检测到退出指令...")
                     print("生成writeup中...")
                     # 生成writeup
-                    writeup_content = model.generate_writeup()
+                    writeup_content = sonetto.generate_writeup()
                     
                     # 创建wp文件夹（如果不存在）
                     os.makedirs('wp', exist_ok=True)
@@ -71,13 +71,13 @@ def main():
                     break
                 
                 # 正常处理通信内容
-                communication_content = read_communication_content()
+                communication_content = communication_manager.read()
                 if communication_content:
                     print("发送communication.md内容给模型...")
-                    response = model.get_response(communication_content)
+                    response = sonetto.get_response(communication_content)
                     print("模型回复已写入communication.md")
                     # 将模型回复写入communication.md
-                    write_to_communication(response)
+                    communication_manager.write(response)
                     # 更新最后修改时间
                     last_modified = os.path.getmtime('communication.md')
                 else:
