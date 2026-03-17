@@ -48,15 +48,15 @@ def clear_communication_file():
     with open('communication.md', 'w', encoding='utf-8') as f:
         f.write('')
 
-def read_soul_content(mode=DEFAULT_MODE):
+def generate_soul(mode):
     """
-    读取soul.md文件内容
+    根据mode建立soul
 
     Args:
         mode: 模式，可选值：boost、coach、copilot、full_power
 
     Returns:
-        soul.md文件的内容
+        根据选定的模式建立好的soul文本
     """
     out = ""
     with open('soul/soul.md', 'r', encoding='utf-8') as f:

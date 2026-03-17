@@ -6,9 +6,17 @@ DeepSeek API客户端模块
 
 import json
 from openai import OpenAI
-from src.file_utils import read_soul_content
+from src.file_utils import generate_soul
 
-class Model:
+class MODES:
+    BOOST = "boost"
+    COACH = "coach"
+    COPILOT = "copilot"
+    FULL_POWER = "full_power"
+
+DEFAULT_MODE = json.load(open('config.json', 'r', encoding='utf-8'))['mode']
+
+class Sonetto:
     """
     DeepSeek大模型客户端类
     
@@ -37,6 +45,8 @@ class Model:
         
         # 初始化会话历史
         self.conversation_history = []
+
+        self.mode = DEFAULT_MODE
     
     def get_response(self, prompt: str) -> str:
         """
@@ -62,7 +72,7 @@ class Model:
         # 提取回复内容
         assistant_response = response.choices[0].message.content
         
-        # 将助手回复添加到上下文
+        # 将Sonetto回复添加到上下文
         self.conversation_history.append({"role": "assistant", "content": assistant_response})
         
         return assistant_response
@@ -84,7 +94,7 @@ class Model:
         self.clear_context()
         
         # 读取soul.md文件内容
-        soul_content = read_soul_content()
+        soul_content = generate_soul(self.mode)
         
         # 将soul.md内容发送给大模型并返回结果
         return self.get_response(soul_content)
