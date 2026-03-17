@@ -16,8 +16,12 @@
                     加载中...
                 </div>
                 <div id="sonetto-info" class="sonetto-info">
-                    <span class="info-value">deepseek-chat</span>
-                    <span class="info-value" id="current-mode">加载中...</span>
+                    <span class="info-value" title="底层模型">deepseek-chat</span>
+                    <span class="info-value" id="current-mode" title="当前外骨骼出力模式">加载中...</span>
+                </div>
+                <div id="loading-status" class="loading-status" style="display: none;">
+                    <div class="loading"></div>
+                    <span>等待模型处理中...</span>
                 </div>
             </div>
         </div>
@@ -31,6 +35,7 @@
                 </div>
                 <!-- 按钮区域 -->
                 <div class="button-container">
+                    <button id="restart-btn" class="btn btn-secondary">重新开始</button>
                     <button id="next-btn" class="btn btn-primary">下一步</button>
                     <button id="exit-btn" class="btn btn-danger">结束</button>
                 </div>
@@ -70,6 +75,23 @@
                     
                     // 更新页面内容
                     parseCommunicationContent(content);
+                    
+                    // 检查是否是初始会话内容或空内容
+                    const isInitialContent = content.trim().includes('请提供题目标题') || content.trim().includes('请点击"下一步"按钮开始解题过程');
+                    
+                    // 检查是否包含模型的实际回答（包含"### 下一步"）
+                    const hasActualResponse = content.trim().includes('### 下一步');
+                    
+                    // 检查是否有具体内容（不是简单的初始提示）
+                    const hasContent = content.trim().length > 50; // 简单判断内容长度
+                    
+                    // 只有当内容包含模型的实际回答且有具体内容时，才隐藏等待状态
+                    if (!hasActualResponse || !content.trim() || isInitialContent || !hasContent) {
+                        document.getElementById('loading-status').style.display = 'flex';
+                    } else {
+                        // 隐藏等待状态
+                        document.getElementById('loading-status').style.display = 'none';
+                    }
                     
                     // 更新修改时间
                     lastModifiedTime = currentModified;
@@ -187,7 +209,7 @@
             inputSectionsContainer.innerHTML = '';
 
             if (inputSections.length === 0) {
-                inputSectionsContainer.innerHTML = '<p>没有需要输入的内容</p>';
+                inputSectionsContainer.innerHTML = '<p>请等待-模型即将就绪</p>';
             } else {
                 inputSections.forEach(title => {
                     const sectionDiv = document.createElement('div');
@@ -325,6 +347,9 @@
                 inputContent += `### ${label}\n${value}\n\n`;
             });
             
+            // 显示等待状态
+            document.getElementById('loading-status').style.display = 'flex';
+            
             // 将输入内容写入communication.md文件
             fetch('communication.md', {
                 method: 'PUT',
@@ -336,15 +361,19 @@
             .then(response => {
                 if (response.ok) {
                     console.log('输入内容已写入communication.md');
-                    alert('已提交输入内容，请等待模型处理');
+                    // 移除alert，等待状态已经显示
                 } else {
                     console.error('写入文件失败:', response.status);
                     alert('写入文件失败，请手动将输入内容复制到后端终端');
+                    // 隐藏等待状态
+                    document.getElementById('loading-status').style.display = 'none';
                 }
             })
             .catch(error => {
                 console.error('写入文件时发生错误:', error);
                 alert('写入文件时发生错误，请手动将输入内容复制到后端终端');
+                // 隐藏等待状态
+                document.getElementById('loading-status').style.display = 'none';
             });
         });
 
@@ -371,6 +400,42 @@
                 .catch(error => {
                     console.error('写入文件时发生错误:', error);
                     alert('写入文件时发生错误，请手动在终端输入"退出"');
+                });
+            }
+        });
+
+        // 重新开始按钮点击事件
+        document.getElementById('restart-btn').addEventListener('click', function() {
+            if (confirm('确定要重新开始会话吗？')) {
+                // 显示等待状态
+                document.getElementById('loading-status').style.display = 'flex';
+                
+                // 向communication.md文件写入重新开始标记
+                fetch('communication.md', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: '### 重新开始标记\nRESTART_SESSION\n'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('重新开始标记已写入communication.md');
+                        // 移除alert，等待状态已经显示
+                        // 重新加载页面内容
+                        setTimeout(loadCommunicationFile, 1000);
+                    } else {
+                        console.error('写入文件失败:', response.status);
+                        alert('写入文件失败，请手动在终端重新启动程序');
+                        // 隐藏等待状态
+                        document.getElementById('loading-status').style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('写入文件时发生错误:', error);
+                    alert('写入文件时发生错误，请手动在终端重新启动程序');
+                    // 隐藏等待状态
+                    document.getElementById('loading-status').style.display = 'none';
                 });
             }
         });

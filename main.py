@@ -70,6 +70,21 @@ def main():
                     print("会话结束，再见！")
                     break
                 
+                # 检查是否包含重新开始标记
+                elif 'RESTART_SESSION' in full_content:
+                    print("\n检测到重新开始指令...")
+                    print("重新初始化会话中...")
+                    # 清空communication.md文件
+                    communication_manager.clear()
+                    # 重新初始化会话
+                    session_response = sonetto.begin_session()
+                    print("\n会话重新初始化完成")
+                    # 将模型回复写入communication.md
+                    communication_manager.write(session_response)
+                    # 更新最后修改时间
+                    last_modified = os.path.getmtime('communication.md')
+                    continue
+                
                 # 正常处理通信内容
                 communication_content = communication_manager.read()
                 if communication_content:
