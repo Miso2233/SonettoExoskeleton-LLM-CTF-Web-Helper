@@ -1,7 +1,10 @@
 """
 文件操作工具模块
 
-该模块包含与文件操作相关的函数，主要用于处理communication.md和soul.md文件的读写操作。
+该模块包含与文件操作相关的类和函数，主要用于处理：
+- communication.md文件的读写操作（通过CommunicationManager类）
+- soul.md系列文件的拼接和生成（通过generate_soul函数）
+- 模式定义（通过MODES类）
 """
 import json
 
@@ -13,40 +16,50 @@ class MODES:
 
 DEFAULT_MODE = json.load(open('config.json', 'r', encoding='utf-8'))['mode']
 
-def read_communication_content():
+class CommunicationManager:
     """
-    读取communication.md文件，返回整个文件的内容
+    通信文件管理类
     
-    Returns:
-        整个文件的内容
+    负责处理communication.md文件的读写操作
     """
-    try:
-        with open('communication.md', 'r', encoding='utf-8') as f:
-            content = f.read()
-        return content
-    except FileNotFoundError:
-        return ""
-
-def write_to_communication(content, title="模型回复"):
-    """
-    将内容写入communication.md文件，每次写入前先清空文件
     
-    Args:
-        content: 要写入的内容
-        title: 内容的标题
-    """
-    # 先清空文件
-    with open('communication.md', 'w', encoding='utf-8') as f:
-        f.write(f"### {title}\n{content}\n\n")
+    def read(self):
+        """
+        读取communication.md文件，返回整个文件的内容
+        
+        Returns:
+            整个文件的内容
+        """
+        try:
+            with open('communication.md', 'r', encoding='utf-8') as f:
+                content = f.read()
+            return content
+        except FileNotFoundError:
+            return ""
+    
+    def write(self, content, title="模型回复"):
+        """
+        将内容写入communication.md文件，每次写入前先清空文件
+        
+        Args:
+            content: 要写入的内容
+            title: 内容的标题
+        """
+        # 先清空文件
+        with open('communication.md', 'w', encoding='utf-8') as f:
+            f.write(f"### {title}\n{content}\n\n")
+    
+    def clear(self):
+        """
+        清空communication.md文件
+        如果文件不存在，自动创建
+        """
+        # 无论文件是否存在，使用'w'模式都会创建或截断文件
+        with open('communication.md', 'w', encoding='utf-8') as f:
+            f.write('')
 
-def clear_communication_file():
-    """
-    清空communication.md文件
-    如果文件不存在，自动创建
-    """
-    # 无论文件是否存在，使用'w'模式都会创建或截断文件
-    with open('communication.md', 'w', encoding='utf-8') as f:
-        f.write('')
+# 创建全局实例
+communication_manager = CommunicationManager()
 
 def generate_soul(mode):
     """
