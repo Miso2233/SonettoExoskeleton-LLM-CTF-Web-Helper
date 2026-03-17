@@ -16,8 +16,8 @@
                     加载中...
                 </div>
                 <div id="sonetto-info" class="sonetto-info">
-                    <span class="info-value">deepseek-chat</span>
-                    <span class="info-value" id="current-mode">加载中...</span>
+                    <span class="info-value" title="底层模型">deepseek-chat</span>
+                    <span class="info-value" id="current-mode" title="当前外骨骼出力模式">加载中...</span>
                 </div>
             </div>
         </div>
@@ -31,6 +31,7 @@
                 </div>
                 <!-- 按钮区域 -->
                 <div class="button-container">
+                    <button id="restart-btn" class="btn btn-secondary">重新开始</button>
                     <button id="next-btn" class="btn btn-primary">下一步</button>
                     <button id="exit-btn" class="btn btn-danger">结束</button>
                 </div>
@@ -371,6 +372,35 @@
                 .catch(error => {
                     console.error('写入文件时发生错误:', error);
                     alert('写入文件时发生错误，请手动在终端输入"退出"');
+                });
+            }
+        });
+
+        // 重新开始按钮点击事件
+        document.getElementById('restart-btn').addEventListener('click', function() {
+            if (confirm('确定要重新开始会话吗？')) {
+                // 向communication.md文件写入重新开始标记
+                fetch('communication.md', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: '### 重新开始标记\nRESTART_SESSION\n'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('重新开始标记已写入communication.md');
+                        alert('会话重新开始指令已发送，请等待初始化');
+                        // 重新加载页面内容
+                        setTimeout(loadCommunicationFile, 1000);
+                    } else {
+                        console.error('写入文件失败:', response.status);
+                        alert('写入文件失败，请手动在终端重新启动程序');
+                    }
+                })
+                .catch(error => {
+                    console.error('写入文件时发生错误:', error);
+                    alert('写入文件时发生错误，请手动在终端重新启动程序');
                 });
             }
         });
