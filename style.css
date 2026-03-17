@@ -486,6 +486,23 @@ body::before {
     to { transform: rotate(360deg); }
 }
 
+/* 加载状态容器 */
+.loading-status {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    justify-content: center;
+    color: var(--color-gray-700);
+    font-size: 0.9rem;
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
     .container {
