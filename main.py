@@ -8,6 +8,7 @@ import os
 import time
 from src.deepseek_client import Sonetto
 from src.file_utils import communication_manager
+from src.websocket_server import WebSocketServer
 
 def main():
     print("=== Sonetto CTF Web 解题助手 ===")
@@ -20,6 +21,11 @@ def main():
     
     # 实例化Sonetto类
     sonetto = Sonetto()
+    
+    # 初始化WebSocket服务器
+    websocket_server = WebSocketServer(sonetto)
+    # 在单独的线程中启动WebSocket服务器
+    websocket_thread = websocket_server.run_in_thread()
     
     # 初始化会话
     session_response = sonetto.begin_session()
@@ -83,6 +89,13 @@ def main():
                     communication_manager.write(session_response)
                     # 更新最后修改时间
                     last_modified = os.path.getmtime('communication.md')
+                    continue
+                
+                # 检查是否是WebSocket处理的内容（包含模型回复标记）
+                elif '### 模型回复' in full_content:
+                    print("检测到WebSocket处理的内容，跳过文件轮询处理")
+                    # 更新最后修改时间，避免重复处理
+                    last_modified = current_modified
                     continue
                 
                 # 正常处理通信内容
