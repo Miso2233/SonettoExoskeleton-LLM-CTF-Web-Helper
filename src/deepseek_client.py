@@ -104,7 +104,7 @@ class Sonetto:
     def generate_writeup(self) -> str:
         """
         根据上下文生成writeup
-        
+
         Returns:
             生成的writeup内容
         """
@@ -121,3 +121,27 @@ class Sonetto:
         writeup_content = self.get_response(prompt)
         
         return writeup_content
+    
+    def switch_mode(self, mode: str) -> None:
+        """
+        切换模型模式
+
+        Args:
+            mode: 新的模型模式
+        """
+        # 更新模式
+        self.mode = mode
+        
+        # 生成新的灵魂
+        soul_content = generate_soul(mode)
+        
+        # 替换最早一条用户信息（即灵魂信息）
+        if self.conversation_history:
+            # 查找第一条用户消息（通常是灵魂信息）
+            for i, message in enumerate(self.conversation_history):
+                if message.get('role') == 'user':
+                    self.conversation_history[i]['content'] = soul_content
+                    break
+        else:
+            # 如果没有历史记录，直接添加灵魂信息
+            self.conversation_history.append({"role": "user", "content": soul_content})

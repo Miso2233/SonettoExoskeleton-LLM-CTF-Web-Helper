@@ -17,7 +17,18 @@
                 </div>
                 <div id="sonetto-info" class="sonetto-info">
                     <span class="info-value" title="底层模型">deepseek-chat</span>
-                    <span class="info-value" id="current-mode" title="当前外骨骼出力模式">加载中...</span>
+                    <div class="mode-selector">
+                        <div class="mode-selector-header" id="mode-selector-header" title="当前外骨骼出力模式">
+                            <span id="current-mode">加载中...</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="mode-dropdown" id="mode-dropdown">
+                            <div class="mode-option" data-mode="boost">boost</div>
+                            <div class="mode-option" data-mode="coach">coach</div>
+                            <div class="mode-option" data-mode="copilot">copilot</div>
+                            <div class="mode-option" data-mode="full_power">full_power</div>
+                        </div>
+                    </div>
                 </div>
                 <div id="loading-status" class="loading-status" style="display: none;">
                     <div class="loading"></div>
@@ -323,7 +334,7 @@
         function initWebSocket() {
             console.log('初始化WebSocket连接...');
             try {
-                ws = new WebSocket('ws://localhost:8765');
+                ws = new WebSocket('ws://localhost:8766');
                 
                 ws.onopen = function() {
                     console.log('WebSocket连接已建立');
@@ -395,6 +406,15 @@
                         // 处理自定义函数响应
                         showFunctionResult(messageData.result);
                         break;
+                    case 'switch_mode':
+                        // 处理模型模式切换响应
+                        document.getElementById('loading-status').style.display = 'none';
+                        // 更新当前模式显示
+                        document.getElementById('current-mode').textContent = messageData.mode;
+                        // 重新加载Sonetto信息
+                        loadSonettoInfo();
+                        console.log('模型模式切换成功:', messageData.message);
+                        break;
                     case 'error':
                         // 处理错误响应
                         console.error('WebSocket错误:', messageData.message);
@@ -434,6 +454,57 @@
             }
         }
         
+        // 初始化模式选择器
+        function initModeSelector() {
+            const header = document.getElementById('mode-selector-header');
+            const dropdown = document.getElementById('mode-dropdown');
+            const arrow = header.querySelector('.dropdown-arrow');
+            const options = dropdown.querySelectorAll('.mode-option');
+            
+            // 点击头部展开/收起下拉菜单
+            header.addEventListener('click', function() {
+                dropdown.classList.toggle('show');
+                arrow.classList.toggle('rotate');
+            });
+            
+            // 点击选项切换模式
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    const mode = this.getAttribute('data-mode');
+                    switchMode(mode);
+                    
+                    // 关闭下拉菜单
+                    dropdown.classList.remove('show');
+                    arrow.classList.remove('rotate');
+                });
+            });
+            
+            // 点击页面其他地方关闭下拉菜单
+            document.addEventListener('click', function(event) {
+                if (!header.contains(event.target)) {
+                    dropdown.classList.remove('show');
+                    arrow.classList.remove('rotate');
+                }
+            });
+        }
+        
+        // 切换模型模式
+        function switchMode(mode) {
+            console.log(`切换模型模式为: ${mode}`);
+            
+            // 显示加载状态
+            document.getElementById('loading-status').style.display = 'flex';
+            
+            // 优先使用WebSocket
+            if (sendButtonClick('switch_mode', { mode: mode })) {
+                // WebSocket发送成功，等待响应
+            } else {
+                // WebSocket不可用，使用文件方式（这里简化处理，实际项目中可能需要更复杂的逻辑）
+                alert('WebSocket未连接，无法切换模型模式');
+                document.getElementById('loading-status').style.display = 'none';
+            }
+        }
+        
         // 初始化
         window.onload = function() {
             // 首次加载时，强制刷新文件内容
@@ -444,6 +515,9 @@
             
             // 初始化WebSocket连接
             initWebSocket();
+            
+            // 初始化模式选择器
+            initModeSelector();
             
             // 立即加载文件
             loadCommunicationFile();
