@@ -171,13 +171,28 @@ class WebSocketServer:
             
             print(f"调用自定义函数: {function_name}")
             
-            # 调用相应的函数
+            # 直接处理自定义函数逻辑
             if function_name == 'analyze_target':
-                result = await self.analyze_target_function(params)
+                target = params.get('target', '')
+                result = {
+                    'target': target,
+                    'analysis': f"分析目标: {target}\n这是一个示例分析结果。"
+                }
             elif function_name == 'scan_vulnerabilities':
-                result = await self.scan_vulnerabilities_function(params)
+                target = params.get('target', '')
+                result = {
+                    'target': target,
+                    'vulnerabilities': [
+                        {'type': 'XSS', 'severity': 'high', 'description': '可能存在跨站脚本漏洞'},
+                        {'type': 'SQL注入', 'severity': 'critical', 'description': '可能存在SQL注入漏洞'}
+                    ]
+                }
             elif function_name == 'generate_payload':
-                result = await self.generate_payload_function(params)
+                vulnerability_type = params.get('vulnerability_type', 'XSS')
+                result = {
+                    'vulnerability_type': vulnerability_type,
+                    'payload': f"示例{ vulnerability_type } payload: <script>alert('XSS')</script>"
+                }
             else:
                 result = {'error': '未知的函数名称'}
             
@@ -186,60 +201,6 @@ class WebSocketServer:
         except Exception as e:
             print(f"处理自定义函数时出错: {e}")
             await self.send_response(websocket, 'error', {'message': str(e)})
-    
-    async def analyze_target_function(self, params):
-        """
-        分析目标函数
-        
-        Args:
-            params: 函数参数
-        
-        Returns:
-            分析结果
-        """
-        target = params.get('target', '')
-        # 这里可以实现具体的分析逻辑
-        return {
-            'target': target,
-            'analysis': f"分析目标: {target}\n这是一个示例分析结果。"
-        }
-    
-    async def scan_vulnerabilities_function(self, params):
-        """
-        扫描漏洞函数
-        
-        Args:
-            params: 函数参数
-        
-        Returns:
-            扫描结果
-        """
-        target = params.get('target', '')
-        # 这里可以实现具体的扫描逻辑
-        return {
-            'target': target,
-            'vulnerabilities': [
-                {'type': 'XSS', 'severity': 'high', 'description': '可能存在跨站脚本漏洞'},
-                {'type': 'SQL注入', 'severity': 'critical', 'description': '可能存在SQL注入漏洞'}
-            ]
-        }
-    
-    async def generate_payload_function(self, params):
-        """
-        生成Payload函数
-        
-        Args:
-            params: 函数参数
-        
-        Returns:
-            生成结果
-        """
-        vulnerability_type = params.get('vulnerability_type', 'XSS')
-        # 这里可以实现具体的payload生成逻辑
-        return {
-            'vulnerability_type': vulnerability_type,
-            'payload': f"示例{ vulnerability_type } payload: <script>alert('XSS')</script>"
-        }
     
     async def send_response(self, websocket, message_type, data):
         """
