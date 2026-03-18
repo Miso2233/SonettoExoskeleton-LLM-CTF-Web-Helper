@@ -176,6 +176,54 @@ body::before {
     font-size: 0.9rem;
 }
 
+/* Token指示器样式 */
+.token-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--border-radius-sm);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 0.9rem;
+}
+
+.token-label {
+    color: var(--color-gray-700);
+}
+
+.token-ring-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.token-ring {
+    width: 24px;
+    height: 24px;
+    transform: rotate(-90deg);
+}
+
+.token-ring-bg {
+    stroke: rgba(0, 0, 0, 0.1);
+}
+
+.token-ring-fill {
+    stroke: var(--color-gray-700);
+    transition: stroke-dashoffset 0.3s ease;
+}
+
+.token-percentage {
+    position: absolute;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    pointer-events: none;
+}
+
 /* 模式选择器样式 */
 .mode-selector {
     position: relative;

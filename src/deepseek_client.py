@@ -16,7 +16,9 @@ class MODES:
 
 DEFAULT_MODE = json.load(open('config.json', 'r', encoding='utf-8'))['mode']
 
-MAX_TOKENS = 4096
+MAX_OUTPUT_TOKENS = 4096
+
+MAX_INPUT_TOKENS = 64000
 
 class Sonetto:
     """
@@ -68,7 +70,7 @@ class Sonetto:
             model="deepseek-chat",  # 使用DeepSeek的聊天模型
             messages=self.conversation_history,
             temperature=0.7,
-            max_tokens=MAX_TOKENS
+            max_tokens=MAX_OUTPUT_TOKENS
         )
         
         # 提取回复内容
@@ -145,3 +147,28 @@ class Sonetto:
         else:
             # 如果没有历史记录，直接添加灵魂信息
             self.conversation_history.append({"role": "user", "content": soul_content})
+    
+    def estimate_context_tokens(self) -> float:
+        """
+        估算当前上下文的token数量占窗口最大值的比例
+
+        Returns:
+            估算的token占用比例
+        """
+        total_chars = 0
+        
+        # 遍历所有对话历史
+        for message in self.conversation_history:
+            if 'content' in message:
+                total_chars += len(message['content'])
+        
+        # 简单估算：1个token约等于3个字符
+        # 对于英文文本，通常1个token约等于4个字符
+        # 对于中文文本，通常1个token约等于2个字符
+        # 取平均值3个字符/token
+        estimated_tokens = total_chars // 3
+        
+        # 为安全起见，添加一些额外的token用于系统消息和格式
+        estimated_tokens += 100
+        
+        return estimated_tokens / MAX_INPUT_TOKENS
