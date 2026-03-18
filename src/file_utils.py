@@ -83,4 +83,7 @@ def generate_soul(mode):
             out += open('soul/copilot.md', 'r', encoding='utf-8').read()
         case MODES.FULL_POWER:
             out += open('soul/full_power.md', 'r', encoding='utf-8').read()
+        case _:
+            raise ValueError(f"Invalid mode: {mode}")
+    out += open('soul/format.md', 'r', encoding='utf-8').read()
     return out
