@@ -19,10 +19,6 @@
                     <span class="info-value" title="底层模型">deepseek-chat</span>
                     <span class="info-value" id="current-mode" title="当前外骨骼出力模式">加载中...</span>
                 </div>
-                <div id="loading-status" class="loading-status" style="display: none;">
-                    <div class="loading"></div>
-                    <span>等待模型处理中...</span>
-                </div>
             </div>
         </div>
 
@@ -33,6 +29,12 @@
                 <div id="input-sections">
                     加载中...
                 </div>
+                <!-- 加载状态 -->
+                <div id="loading-status" class="loading-status" style="display: none;">
+                    <div class="loading"></div>
+                    <span>等待模型处理中...</span>
+                </div>
+                
                 <!-- 按钮区域 -->
                 <div class="button-container">
                     <button id="restart-btn" class="btn btn-secondary">重新开始</button>
