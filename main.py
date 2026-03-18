@@ -7,7 +7,7 @@ Sonetto CTF Web 解题助手
 import os
 import time
 from src.deepseek_client import Sonetto
-from src.file_utils import communication_manager
+from src.file_utils import communication_manager, save_writeup
 from src.websocket_server import WebSocketServer
 
 def main():
@@ -61,18 +61,8 @@ def main():
                     # 生成writeup
                     writeup_content = sonetto.generate_writeup()
                     
-                    # 创建wp文件夹（如果不存在）
-                    os.makedirs('wp', exist_ok=True)
-                    
-                    # 生成时间戳文件名
-                    timestamp = time.strftime('%Y%m%d_%H%M%S')
-                    writeup_filename = f'wp/{timestamp}_writeup.md'
-                    
                     # 保存writeup到文件
-                    with open(writeup_filename, 'w', encoding='utf-8') as f:
-                        f.write(writeup_content)
-                    
-                    print(f"\nwriteup已保存到: {writeup_filename}")
+                    save_writeup(writeup_content)
                     print("会话结束，再见！")
                     break
                 

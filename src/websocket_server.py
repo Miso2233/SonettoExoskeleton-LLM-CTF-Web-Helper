@@ -10,7 +10,8 @@ import asyncio
 import websockets
 import json
 import threading
-from src.file_utils import communication_manager
+import time
+from src.file_utils import communication_manager, save_writeup
 from src.deepseek_client import Sonetto
 
 class WebSocketServer:
@@ -150,20 +151,12 @@ class WebSocketServer:
             # 生成writeup
             writeup_content = self.sonetto.generate_writeup()
             
-            # 创建wp文件夹（如果不存在）
-            import os
-            import time
-            os.makedirs('wp', exist_ok=True)
+            # 保存writeup到文件
+            save_writeup(writeup_content)
             
-            # 生成时间戳文件名
+            # 生成时间戳文件名（用于返回给客户端）
             timestamp = time.strftime('%Y%m%d_%H%M%S')
             writeup_filename = f'wp/{timestamp}_writeup.md'
-            
-            # 保存writeup到文件
-            with open(writeup_filename, 'w', encoding='utf-8') as f:
-                f.write(writeup_content)
-            
-            print(f"\nwriteup已保存到: {writeup_filename}")
             
             # 发送响应给客户端
             await self.send_response(websocket, 'exit', {'writeup': writeup_content, 'filename': writeup_filename})
