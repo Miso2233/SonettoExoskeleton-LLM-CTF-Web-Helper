@@ -78,6 +78,8 @@ class WebSocketServer:
                 await self.handle_exit(websocket)
             elif message_type == 'custom_function':
                 await self.handle_custom_function(websocket, data)
+            elif message_type == 'switch_mode':
+                await self.handle_switch_mode(websocket, data)
             else:
                 await self.send_response(websocket, 'error', {'message': '未知的消息类型'})
         except json.JSONDecodeError:
@@ -210,6 +212,40 @@ class WebSocketServer:
             print(f"处理自定义函数时出错: {e}")
             await self.send_response(websocket, 'error', {'message': str(e)})
     
+    async def handle_switch_mode(self, websocket, data):
+        """
+        处理模型模式切换
+
+        Args:
+            websocket: WebSocket连接对象
+            data: 消息数据
+        """
+        try:
+            # 获取新的模式
+            mode = data.get('mode')
+            
+            if not mode:
+                await self.send_response(websocket, 'error', {'message': '缺少模式参数'})
+                return
+            
+            # 调用Sonetto的switch_mode方法
+            self.sonetto.switch_mode(mode)
+            
+            # 更新config.json文件
+            import json
+            with open('config.json', 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            config['mode'] = mode
+            with open('config.json', 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=4, ensure_ascii=False)
+            
+            # 发送响应给客户端
+            await self.send_response(websocket, 'switch_mode', {'mode': mode, 'message': '模型模式切换成功'})
+            print(f"模型模式切换为: {mode}")
+        except Exception as e:
+            print(f"处理模式切换时出错: {e}")
+            await self.send_response(websocket, 'error', {'message': str(e)})
+    
     async def send_response(self, websocket, message_type, data):
         """
         发送响应给客户端
@@ -233,9 +269,9 @@ class WebSocketServer:
         self.server = await websockets.serve(
             self.handle_connection, 
             "localhost", 
-            8765
+            8766
         )
-        print("WebSocket服务器已启动，监听地址: ws://localhost:8765")
+        print("WebSocket服务器已启动，监听地址: ws://localhost:8766")
         await self.server.serve_forever()
     
     def run_in_thread(self):

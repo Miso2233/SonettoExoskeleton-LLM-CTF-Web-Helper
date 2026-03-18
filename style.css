@@ -176,6 +176,79 @@ body::before {
     font-size: 0.9rem;
 }
 
+/* 模式选择器样式 */
+.mode-selector {
+    position: relative;
+}
+
+.mode-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0.8rem;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--border-radius-sm);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 0.9rem;
+    color: var(--color-gray-700);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    min-width: 120px;
+}
+
+.mode-selector-header:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-arrow {
+    font-size: 0.7rem;
+    transition: transform var(--transition-fast);
+    margin-left: 0.5rem;
+}
+
+.dropdown-arrow.rotate {
+    transform: rotate(180deg);
+}
+
+.mode-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.3rem;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+    overflow: hidden;
+}
+
+.mode-dropdown.show {
+    display: block;
+}
+
+.mode-option {
+    padding: 0.5rem 0.8rem;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 0.85rem;
+    color: var(--color-gray-700);
+}
+
+.mode-option:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.mode-option.selected {
+    background: rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+}
+
 /* 内容区域 */
 .content-area {
     flex: 1;
