@@ -255,6 +255,13 @@ class WebSocketServer:
             message_type: 消息类型
             data: 响应数据
         """
+        # 添加token占用比例
+        try:
+            token_ratio = self.sonetto.estimate_context_tokens()
+            data['token_ratio'] = token_ratio
+        except Exception as e:
+            print(f"获取token比例时出错: {e}")
+        
         response = {
             'type': message_type,
             'data': data
