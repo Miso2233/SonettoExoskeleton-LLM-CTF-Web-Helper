@@ -17,6 +17,16 @@
                 </div>
                 <div id="sonetto-info" class="sonetto-info">
                     <span class="info-value" title="底层模型">deepseek-chat</span>
+                    <div class="token-indicator" title="当前token占用比例">
+                        <span class="token-label">token</span>
+                        <div class="token-ring-container">
+                            <svg class="token-ring" viewBox="0 0 40 40">
+                                <circle class="token-ring-bg" cx="20" cy="20" r="18" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="3"></circle>
+                                <circle class="token-ring-fill" cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="113" stroke-dashoffset="113" transform="rotate(-90 20 20)"></circle>
+                            </svg>
+                            <span class="token-percentage" id="token-ratio">0%</span>
+                        </div>
+                    </div>
                     <div class="mode-selector">
                         <div class="mode-selector-header" id="mode-selector-header" title="当前外骨骼出力模式">
                             <span id="current-mode">加载中...</span>
@@ -425,6 +435,23 @@
                         break;
                     default:
                         console.log('未知的消息类型:', messageType);
+                }
+                
+                // 更新token占用比例
+                if (messageData.token_ratio !== undefined) {
+                    const tokenRatioElement = document.getElementById('token-ratio');
+                    const tokenRingFill = document.querySelector('.token-ring-fill');
+                    if (tokenRatioElement && tokenRingFill) {
+                        const percentage = Math.round(messageData.token_ratio * 100);
+                        tokenRatioElement.textContent = `${percentage}%`;
+                        
+                        // 更新圆环进度
+                        const circumference = 113; // 2 * π * 18
+                        const offset = circumference - (messageData.token_ratio * circumference);
+                        tokenRingFill.style.strokeDashoffset = offset;
+                        
+                        console.log('Token占用比例更新:', percentage, '%');
+                    }
                 }
             } catch (error) {
                 console.error('处理WebSocket消息时出错:', error);
