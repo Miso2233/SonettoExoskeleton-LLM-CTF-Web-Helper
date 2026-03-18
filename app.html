@@ -46,6 +46,13 @@
     <script>
         // 保存上次文件修改时间
         let lastModifiedTime = 0;
+        
+        // WebSocket相关变量
+        let ws = null;
+        let wsConnected = false;
+        let wsReconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+        const RECONNECT_DELAY = 3000;
 
         // 读取和解析communication.md文件
         async function loadCommunicationFile() {
@@ -312,6 +319,121 @@
             }
         }
 
+        // 初始化WebSocket连接
+        function initWebSocket() {
+            console.log('初始化WebSocket连接...');
+            try {
+                ws = new WebSocket('ws://localhost:8765');
+                
+                ws.onopen = function() {
+                    console.log('WebSocket连接已建立');
+                    wsConnected = true;
+                    wsReconnectAttempts = 0;
+                    // 更新连接状态显示
+                    updateConnectionStatus('WebSocket连接已建立');
+                };
+                
+                ws.onmessage = function(event) {
+                    handleWebSocketMessage(event);
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket连接错误:', error);
+                    wsConnected = false;
+                    updateConnectionStatus('WebSocket连接错误');
+                };
+                
+                ws.onclose = function() {
+                    console.log('WebSocket连接已关闭');
+                    wsConnected = false;
+                    updateConnectionStatus('WebSocket连接已关闭');
+                    // 尝试重新连接
+                    if (wsReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                        wsReconnectAttempts++;
+                        console.log(`尝试重新连接 (${wsReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                        setTimeout(initWebSocket, RECONNECT_DELAY);
+                    } else {
+                        console.log('达到最大重连次数，停止尝试');
+                        updateConnectionStatus('WebSocket连接失败，已切换到文件轮询模式');
+                    }
+                };
+            } catch (error) {
+                console.error('初始化WebSocket时出错:', error);
+                wsConnected = false;
+                updateConnectionStatus('WebSocket初始化失败，已切换到文件轮询模式');
+            }
+        }
+        
+        // 处理WebSocket消息
+        function handleWebSocketMessage(event) {
+            try {
+                const data = JSON.parse(event.data);
+                const messageType = data.type;
+                const messageData = data.data;
+                
+                console.log('收到WebSocket消息:', messageType, messageData);
+                
+                // 根据消息类型处理
+                switch (messageType) {
+                    case 'next_step':
+                        // 处理下一步响应
+                        document.getElementById('loading-status').style.display = 'none';
+                        // 重新加载文件内容
+                        loadCommunicationFile();
+                        break;
+                    case 'restart':
+                        // 处理重新开始响应
+                        document.getElementById('loading-status').style.display = 'none';
+                        // 重新加载文件内容
+                        loadCommunicationFile();
+                        break;
+                    case 'exit':
+                        // 处理结束响应
+                        alert('会话结束指令已发送，请等待writeup生成');
+                        break;
+                    case 'custom_function':
+                        // 处理自定义函数响应
+                        showFunctionResult(messageData.result);
+                        break;
+                    case 'error':
+                        // 处理错误响应
+                        console.error('WebSocket错误:', messageData.message);
+                        alert(`错误: ${messageData.message}`);
+                        document.getElementById('loading-status').style.display = 'none';
+                        break;
+                    default:
+                        console.log('未知的消息类型:', messageType);
+                }
+            } catch (error) {
+                console.error('处理WebSocket消息时出错:', error);
+            }
+        }
+        
+        // 更新连接状态显示
+        function updateConnectionStatus(status) {
+            console.log('连接状态:', status);
+            // 可以在这里添加状态显示逻辑
+        }
+        
+        // 显示函数执行结果
+        function showFunctionResult(result) {
+            // 显示函数执行结果
+            let resultText = '';
+            if (result.error) {
+                resultText = `错误: ${result.error}`;
+            } else if (result.analysis) {
+                resultText = result.analysis;
+            } else if (result.vulnerabilities) {
+                resultText = `漏洞扫描结果:\n${result.vulnerabilities.map(v => `${v.type} (${v.severity}): ${v.description}`).join('\n')}`;
+            } else if (result.payload) {
+                resultText = `生成的Payload:\n${result.payload}`;
+            }
+            
+            if (resultText) {
+                alert(resultText);
+            }
+        }
+        
         // 初始化
         window.onload = function() {
             // 首次加载时，强制刷新文件内容
@@ -320,6 +442,9 @@
             // 加载Sonetto信息
             setTimeout(loadSonettoInfo, 100); // 延迟执行，确保DOM元素已加载
             
+            // 初始化WebSocket连接
+            initWebSocket();
+            
             // 立即加载文件
             loadCommunicationFile();
             
@@ -327,6 +452,22 @@
             setInterval(loadCommunicationFile, 5000); // 每5秒检查一次
         };
 
+        // 发送按钮点击事件通过WebSocket
+        function sendButtonClick(type, data = {}) {
+            if (wsConnected && ws.readyState === WebSocket.OPEN) {
+                console.log(`通过WebSocket发送${type}请求`);
+                const message = {
+                    type: type,
+                    ...data
+                };
+                ws.send(JSON.stringify(message));
+                return true;
+            } else {
+                console.log(`WebSocket未连接，使用文件方式发送${type}请求`);
+                return false;
+            }
+        }
+        
         // 下一步按钮点击事件
         document.getElementById('next-btn').addEventListener('click', function() {
             // 收集所有输入内容
@@ -341,66 +482,78 @@
             
             // 构建输入内容
             let inputContent = '';
+            const labels = {};
             inputElements.forEach(element => {
                 const label = element.previousElementSibling.textContent;
                 const value = element.value;
                 inputContent += `### ${label}\n${value}\n\n`;
+                labels[label] = value;
             });
             
             // 显示等待状态
             document.getElementById('loading-status').style.display = 'flex';
             
-            // 将输入内容写入communication.md文件
-            fetch('communication.md', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'text/plain'
-                },
-                body: inputContent
-            })
-            .then(response => {
-                if (response.ok) {
-                    console.log('输入内容已写入communication.md');
-                    // 移除alert，等待状态已经显示
-                } else {
-                    console.error('写入文件失败:', response.status);
-                    alert('写入文件失败，请手动将输入内容复制到后端终端');
-                    // 隐藏等待状态
-                    document.getElementById('loading-status').style.display = 'none';
-                }
-            })
-            .catch(error => {
-                console.error('写入文件时发生错误:', error);
-                alert('写入文件时发生错误，请手动将输入内容复制到后端终端');
-                // 隐藏等待状态
-                document.getElementById('loading-status').style.display = 'none';
-            });
-        });
-
-        // 结束按钮点击事件
-        document.getElementById('exit-btn').addEventListener('click', function() {
-            if (confirm('确定要结束会话吗？')) {
-                // 向communication.md文件写入退出标记
+            // 优先使用WebSocket
+            if (sendButtonClick('next_step', { inputs: labels })) {
+                // WebSocket发送成功，等待响应
+            } else {
+                // WebSocket不可用，使用文件方式
                 fetch('communication.md', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'text/plain'
                     },
-                    body: '### 退出标记\nEXIT_SESSION\n'
+                    body: inputContent
                 })
                 .then(response => {
                     if (response.ok) {
-                        console.log('退出标记已写入communication.md');
-                        alert('会话结束指令已发送，请等待writeup生成');
+                        console.log('输入内容已写入communication.md');
+                        // 移除alert，等待状态已经显示
                     } else {
                         console.error('写入文件失败:', response.status);
-                        alert('写入文件失败，请手动在终端输入"退出"');
+                        alert('写入文件失败，请手动将输入内容复制到后端终端');
+                        // 隐藏等待状态
+                        document.getElementById('loading-status').style.display = 'none';
                     }
                 })
                 .catch(error => {
                     console.error('写入文件时发生错误:', error);
-                    alert('写入文件时发生错误，请手动在终端输入"退出"');
+                    alert('写入文件时发生错误，请手动将输入内容复制到后端终端');
+                    // 隐藏等待状态
+                    document.getElementById('loading-status').style.display = 'none';
                 });
+            }
+        });
+
+        // 结束按钮点击事件
+        document.getElementById('exit-btn').addEventListener('click', function() {
+            if (confirm('确定要结束会话吗？')) {
+                // 优先使用WebSocket
+                if (sendButtonClick('exit')) {
+                    // WebSocket发送成功，等待响应
+                } else {
+                    // WebSocket不可用，使用文件方式
+                    fetch('communication.md', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'text/plain'
+                        },
+                        body: '### 退出标记\nEXIT_SESSION\n'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('退出标记已写入communication.md');
+                            alert('会话结束指令已发送，请等待writeup生成');
+                        } else {
+                            console.error('写入文件失败:', response.status);
+                            alert('写入文件失败，请手动在终端输入"退出"');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('写入文件时发生错误:', error);
+                        alert('写入文件时发生错误，请手动在终端输入"退出"');
+                    });
+                }
             }
         });
 
@@ -410,33 +563,38 @@
                 // 显示等待状态
                 document.getElementById('loading-status').style.display = 'flex';
                 
-                // 向communication.md文件写入重新开始标记
-                fetch('communication.md', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'text/plain'
-                    },
-                    body: '### 重新开始标记\nRESTART_SESSION\n'
-                })
-                .then(response => {
-                    if (response.ok) {
-                        console.log('重新开始标记已写入communication.md');
-                        // 移除alert，等待状态已经显示
-                        // 重新加载页面内容
-                        setTimeout(loadCommunicationFile, 1000);
-                    } else {
-                        console.error('写入文件失败:', response.status);
-                        alert('写入文件失败，请手动在终端重新启动程序');
+                // 优先使用WebSocket
+                if (sendButtonClick('restart')) {
+                    // WebSocket发送成功，等待响应
+                } else {
+                    // WebSocket不可用，使用文件方式
+                    fetch('communication.md', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'text/plain'
+                        },
+                        body: '### 重新开始标记\nRESTART_SESSION\n'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            console.log('重新开始标记已写入communication.md');
+                            // 移除alert，等待状态已经显示
+                            // 重新加载页面内容
+                            setTimeout(loadCommunicationFile, 1000);
+                        } else {
+                            console.error('写入文件失败:', response.status);
+                            alert('写入文件失败，请手动在终端重新启动程序');
+                            // 隐藏等待状态
+                            document.getElementById('loading-status').style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('写入文件时发生错误:', error);
+                        alert('写入文件时发生错误，请手动在终端重新启动程序');
                         // 隐藏等待状态
                         document.getElementById('loading-status').style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.error('写入文件时发生错误:', error);
-                    alert('写入文件时发生错误，请手动在终端重新启动程序');
-                    // 隐藏等待状态
-                    document.getElementById('loading-status').style.display = 'none';
-                });
+                    });
+                }
             }
         });
     </script>

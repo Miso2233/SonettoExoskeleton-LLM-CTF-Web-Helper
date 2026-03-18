@@ -1,0 +1,289 @@
+"""
+WebSocket服务器模块
+
+该模块实现了WebSocket服务器功能，用于处理前端的实时通信请求，包括：
+- 按钮点击事件处理
+- 自定义函数调用
+- 客户端连接管理
+"""
+import asyncio
+import websockets
+import json
+import threading
+from src.file_utils import communication_manager
+from src.deepseek_client import Sonetto
+
+class WebSocketServer:
+    """
+    WebSocket服务器类
+    
+    负责处理前端的实时通信请求
+    """
+    
+    def __init__(self, sonetto_instance):
+        """
+        初始化WebSocket服务器
+        
+        Args:
+            sonetto_instance: Sonetto类的实例
+        """
+        self.sonetto = sonetto_instance
+        self.clients = set()
+        self.server = None
+        self.loop = None
+    
+    async def handle_connection(self, websocket):
+        """
+        处理新的WebSocket连接
+        
+        Args:
+            websocket: WebSocket连接对象
+        """
+        # 添加客户端到集合
+        self.clients.add(websocket)
+        print(f"新的客户端连接: {websocket.remote_address}")
+        
+        try:
+            # 处理消息循环
+            async for message in websocket:
+                await self.process_message(websocket, message)
+        except websockets.exceptions.ConnectionClosedError:
+            print(f"客户端连接关闭: {websocket.remote_address}")
+        finally:
+            # 从集合中移除客户端
+            self.clients.remove(websocket)
+    
+    async def process_message(self, websocket, message):
+        """
+        处理收到的消息
+        
+        Args:
+            websocket: WebSocket连接对象
+            message: 收到的消息
+        """
+        try:
+            # 解析JSON消息
+            data = json.loads(message)
+            message_type = data.get('type')
+            
+            print(f"收到消息类型: {message_type}")
+            
+            # 根据消息类型处理
+            if message_type == 'next_step':
+                await self.handle_next_step(websocket, data)
+            elif message_type == 'restart':
+                await self.handle_restart(websocket)
+            elif message_type == 'exit':
+                await self.handle_exit(websocket)
+            elif message_type == 'custom_function':
+                await self.handle_custom_function(websocket, data)
+            else:
+                await self.send_response(websocket, 'error', {'message': '未知的消息类型'})
+        except json.JSONDecodeError:
+            await self.send_response(websocket, 'error', {'message': '无效的JSON格式'})
+        except Exception as e:
+            print(f"处理消息时出错: {e}")
+            await self.send_response(websocket, 'error', {'message': str(e)})
+    
+    async def handle_next_step(self, websocket, data):
+        """
+        处理下一步按钮点击
+        
+        Args:
+            websocket: WebSocket连接对象
+            data: 消息数据
+        """
+        try:
+            # 获取输入内容
+            inputs = data.get('inputs', {})
+            
+            # 构建输入内容
+            input_content = ''
+            for label, value in inputs.items():
+                input_content += f"### {label}\n{value}\n\n"
+            
+            # 发送到模型处理
+            response = self.sonetto.get_response(input_content)
+            
+            # 写入communication.md文件
+            communication_manager.write(response)
+            
+            # 发送响应给客户端
+            await self.send_response(websocket, 'next_step', {'response': response})
+            print("下一步处理完成")
+        except Exception as e:
+            print(f"处理下一步时出错: {e}")
+            await self.send_response(websocket, 'error', {'message': str(e)})
+    
+    async def handle_restart(self, websocket):
+        """
+        处理重新开始按钮点击
+        
+        Args:
+            websocket: WebSocket连接对象
+        """
+        try:
+            # 清空communication.md文件
+            communication_manager.clear()
+            
+            # 重新初始化会话
+            session_response = self.sonetto.begin_session()
+            
+            # 将模型回复写入communication.md
+            communication_manager.write(session_response)
+            
+            # 发送响应给客户端
+            await self.send_response(websocket, 'restart', {'response': session_response})
+            print("会话重新初始化完成")
+        except Exception as e:
+            print(f"处理重新开始时出错: {e}")
+            await self.send_response(websocket, 'error', {'message': str(e)})
+    
+    async def handle_exit(self, websocket):
+        """
+        处理结束按钮点击
+        
+        Args:
+            websocket: WebSocket连接对象
+        """
+        try:
+            # 生成writeup
+            writeup_content = self.sonetto.generate_writeup()
+            
+            # 发送响应给客户端
+            await self.send_response(websocket, 'exit', {'writeup': writeup_content})
+            print("会话结束，writeup生成完成")
+        except Exception as e:
+            print(f"处理结束时出错: {e}")
+            await self.send_response(websocket, 'error', {'message': str(e)})
+    
+    async def handle_custom_function(self, websocket, data):
+        """
+        处理自定义函数调用
+        
+        Args:
+            websocket: WebSocket连接对象
+            data: 消息数据
+        """
+        try:
+            function_name = data.get('function_name')
+            params = data.get('params', {})
+            
+            print(f"调用自定义函数: {function_name}")
+            
+            # 调用相应的函数
+            if function_name == 'analyze_target':
+                result = await self.analyze_target_function(params)
+            elif function_name == 'scan_vulnerabilities':
+                result = await self.scan_vulnerabilities_function(params)
+            elif function_name == 'generate_payload':
+                result = await self.generate_payload_function(params)
+            else:
+                result = {'error': '未知的函数名称'}
+            
+            # 发送响应给客户端
+            await self.send_response(websocket, 'custom_function', {'result': result})
+        except Exception as e:
+            print(f"处理自定义函数时出错: {e}")
+            await self.send_response(websocket, 'error', {'message': str(e)})
+    
+    async def analyze_target_function(self, params):
+        """
+        分析目标函数
+        
+        Args:
+            params: 函数参数
+        
+        Returns:
+            分析结果
+        """
+        target = params.get('target', '')
+        # 这里可以实现具体的分析逻辑
+        return {
+            'target': target,
+            'analysis': f"分析目标: {target}\n这是一个示例分析结果。"
+        }
+    
+    async def scan_vulnerabilities_function(self, params):
+        """
+        扫描漏洞函数
+        
+        Args:
+            params: 函数参数
+        
+        Returns:
+            扫描结果
+        """
+        target = params.get('target', '')
+        # 这里可以实现具体的扫描逻辑
+        return {
+            'target': target,
+            'vulnerabilities': [
+                {'type': 'XSS', 'severity': 'high', 'description': '可能存在跨站脚本漏洞'},
+                {'type': 'SQL注入', 'severity': 'critical', 'description': '可能存在SQL注入漏洞'}
+            ]
+        }
+    
+    async def generate_payload_function(self, params):
+        """
+        生成Payload函数
+        
+        Args:
+            params: 函数参数
+        
+        Returns:
+            生成结果
+        """
+        vulnerability_type = params.get('vulnerability_type', 'XSS')
+        # 这里可以实现具体的payload生成逻辑
+        return {
+            'vulnerability_type': vulnerability_type,
+            'payload': f"示例{ vulnerability_type } payload: <script>alert('XSS')</script>"
+        }
+    
+    async def send_response(self, websocket, message_type, data):
+        """
+        发送响应给客户端
+        
+        Args:
+            websocket: WebSocket连接对象
+            message_type: 消息类型
+            data: 响应数据
+        """
+        response = {
+            'type': message_type,
+            'data': data
+        }
+        await websocket.send(json.dumps(response))
+    
+    async def start_server(self):
+        """
+        启动WebSocket服务器
+        """
+        print("启动WebSocket服务器...")
+        self.server = await websockets.serve(
+            self.handle_connection, 
+            "localhost", 
+            8765
+        )
+        print("WebSocket服务器已启动，监听地址: ws://localhost:8765")
+        await self.server.serve_forever()
+    
+    def run_in_thread(self):
+        """
+        在单独的线程中运行WebSocket服务器
+        """
+        def run_server():
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+            try:
+                self.loop.run_until_complete(self.start_server())
+            except KeyboardInterrupt:
+                pass
+            finally:
+                self.loop.close()
+        
+        # 创建并启动线程
+        thread = threading.Thread(target=run_server, daemon=True)
+        thread.start()
+        return thread
