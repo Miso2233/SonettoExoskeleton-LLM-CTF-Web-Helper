@@ -16,6 +16,8 @@ class MODES:
 
 DEFAULT_MODE = json.load(open('config.json', 'r', encoding='utf-8'))['mode']
 
+MAX_TOKENS = 4096
+
 class Sonetto:
     """
     DeepSeek大模型客户端类
@@ -66,7 +68,7 @@ class Sonetto:
             model="deepseek-chat",  # 使用DeepSeek的聊天模型
             messages=self.conversation_history,
             temperature=0.7,
-            max_tokens=2048
+            max_tokens=MAX_TOKENS
         )
         
         # 提取回复内容

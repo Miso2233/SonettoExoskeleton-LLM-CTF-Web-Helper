@@ -7,6 +7,8 @@
 - 模式定义（通过MODES类）
 """
 import json
+import os
+import time
 
 class MODES:
     BOOST = "boost"
@@ -60,6 +62,26 @@ class CommunicationManager:
 
 # 创建全局实例
 communication_manager = CommunicationManager()
+
+def save_writeup(content: str) -> None:
+    """
+    保存writeup到文件
+    
+    Args:
+        content: writeup内容
+    """
+    # 创建wp文件夹（如果不存在）
+    os.makedirs('wp', exist_ok=True)
+    
+    # 生成时间戳文件名
+    timestamp = time.strftime('%Y%m%d_%H%M%S')
+    writeup_filename = f'wp/{timestamp}_writeup.md'
+    
+    # 保存writeup到文件
+    with open(writeup_filename, 'w', encoding='utf-8') as f:
+        f.write(content)
+    
+    print(f"\nwriteup已保存到: {writeup_filename}")
 
 def generate_soul(mode):
     """
