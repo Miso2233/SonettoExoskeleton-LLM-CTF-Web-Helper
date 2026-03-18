@@ -150,8 +150,23 @@ class WebSocketServer:
             # 生成writeup
             writeup_content = self.sonetto.generate_writeup()
             
+            # 创建wp文件夹（如果不存在）
+            import os
+            import time
+            os.makedirs('wp', exist_ok=True)
+            
+            # 生成时间戳文件名
+            timestamp = time.strftime('%Y%m%d_%H%M%S')
+            writeup_filename = f'wp/{timestamp}_writeup.md'
+            
+            # 保存writeup到文件
+            with open(writeup_filename, 'w', encoding='utf-8') as f:
+                f.write(writeup_content)
+            
+            print(f"\nwriteup已保存到: {writeup_filename}")
+            
             # 发送响应给客户端
-            await self.send_response(websocket, 'exit', {'writeup': writeup_content})
+            await self.send_response(websocket, 'exit', {'writeup': writeup_content, 'filename': writeup_filename})
             print("会话结束，writeup生成完成")
         except Exception as e:
             print(f"处理结束时出错: {e}")
