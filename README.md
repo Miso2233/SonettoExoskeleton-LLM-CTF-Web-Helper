@@ -81,9 +81,10 @@ Sonetto会根据soul.md中的工具链信息和决策时机，在解题过程中
 
 1. **克隆项目到本地**：
    ```bash
-   git clone https://github.com/yourusername/SonettoExoskeleton-LLM-CTF-Web-Helper.git
+   git clone https://github.com/Miso2233/SonettoExoskeleton-LLM-CTF-Web-Helper.git
    cd SonettoExoskeleton-LLM-CTF-Web-Helper
    ```
+   或直接下载最新版本源代码压缩包并解压。
 
 2. **创建虚拟环境**：
    ```bash
@@ -121,6 +122,8 @@ Sonetto会根据soul.md中的工具链信息和决策时机，在解题过程中
 ## 使用指南
 
 ### 基本使用流程
+
+0. **确保工作目录已经切换到项目根目录**。
 
 1. **在一个powershell窗口中启动程序**：
    ```bash
