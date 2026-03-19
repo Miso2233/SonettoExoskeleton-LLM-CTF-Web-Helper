@@ -2,7 +2,7 @@
 
 ## 项目概述-立志成为最佳CTF-web解题助手
 
-![这是图片](/pic/屏幕截图%202026-03-16%20212303.png "实战截图")
+![这是图片](/pic/readme.png "实战截图")
 
 **SonettoExoskeleton-LLM-CTF-Web-Helper|十四行诗“外骨骼”体系** 是一款基于DeepSeek等OpenAI接口大语言模型构建的智能CTF Web半自动解题助手。它专为CTF（Capture The Flag）Web安全竞赛设计，通过AI驱动的交互方式，为安全爱好者和参赛者提供全方位的解题支持。
 
