@@ -78,6 +78,9 @@ class Sonetto:
         
         # 将Sonetto回复添加到上下文
         self.conversation_history.append({"role": "assistant", "content": assistant_response})
+
+        # 增加备注输入框
+        assistant_response += "\n\n---\n### 备注"
         
         return assistant_response
     
