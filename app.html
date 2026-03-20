@@ -145,58 +145,91 @@
             }
         }
 
-        // Markdown渲染函数
         function renderMarkdown(text) {
             if (!text) return '';
-            
-            // 处理标题
-            text = text.replace(/^#{1} (.*$)/gm, '<h1>$1</h1>');
-            text = text.replace(/^#{2} (.*$)/gm, '<h2>$2</h2>');
-            text = text.replace(/^#{3} (.*$)/gm, '<h3>$3</h3>');
-            text = text.replace(/^#{4} (.*$)/gm, '<h4>$4</h4>');
-            text = text.replace(/^#{5} (.*$)/gm, '<h5>$5</h5>');
-            text = text.replace(/^#{6} (.*$)/gm, '<h6>$6</h6>');
-            
-            // 处理粗体和斜体
-            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
-            text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            text = text.replace(/_(.*?)_/g, '<em>$1</em>');
-            
-            // 处理链接
-            text = text.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-            
-            // 处理图片
-            text = text.replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 10px 0;">');
-            
-            // 处理代码块
-            text = text.replace(/```([\s\S]*?)```/g, '<pre style="background: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px; overflow-x: auto; margin: 10px 0;"><code>$1</code></pre>');
-            
-            // 处理行内代码
-            text = text.replace(/`([^`]+)`/g, '<code style="background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 3px;">$1</code>');
-            
-            // 处理无序列表
-            text = text.replace(/^\* (.*$)/gm, '<li>$1</li>');
-            text = text.replace(/^\- (.*$)/gm, '<li>$1</li>');
-            text = text.replace(/^\+ (.*$)/gm, '<li>$1</li>');
-            text = text.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
-            
-            // 处理有序列表
-            text = text.replace(/^\d+\. (.*$)/gm, '<li>$1</li>');
-            text = text.replace(/(<li>.*<\/li>)/gs, '<ol>$1</ol>');
-            
-            // 处理引用
-            text = text.replace(/^> (.*$)/gm, '<blockquote style="border-left: 3px solid rgba(0,0,0,0.2); padding-left: 10px; margin: 10px 0;">$1</blockquote>');
-            
-            // 处理分割线
-            text = text.replace(/^---$/gm, '<hr style="border: none; border-top: 1px solid rgba(0,0,0,0.2); margin: 20px 0;">');
-            
-            // 处理段落
-            text = text.replace(/^(?!<h[1-6]>)(?!<ul>)(?!<ol>)(?!<li>)(?!<blockquote>)(?!<pre>)(?!<hr>)(.*$)/gm, '<p>$1</p>');
-            
-            // 处理空行
-            text = text.replace(/<p><\/p>/g, '');
-            
+
+            const codeBlocks = [];
+            const placeholder = (i) => `\uE000CODE${i}\uE001`;
+            const placeholderRe = /\uE000CODE(\d+)\uE001/g;
+
+            // ── 1. 先保护代码 ──────────────────────────────────────────────
+            text = text.replace(/```([\w]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+                const i = codeBlocks.length;
+                const safe = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const cls = lang ? ` class="language-${lang}"` : '';
+                codeBlocks.push(`<pre style="background:rgba(0,0,0,0.05);padding:10px;border-radius:5px;overflow-x:auto;margin:10px 0"><code${cls}>${safe}</code></pre>`);
+                return placeholder(i);
+            });
+            text = text.replace(/`([^`\n]+)`/g, (_, code) => {
+                const i = codeBlocks.length;
+                const safe = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                codeBlocks.push(`<code style="background:rgba(0,0,0,0.05);padding:2px 4px;border-radius:3px">${safe}</code>`);
+                return placeholder(i);
+            });
+
+            // ── 2. 块级结构（标题、列表、引用、分割线）─────────────────────
+            text = text.replace(/^#{6} (.*$)/gm, '<h6>$1</h6>');
+            text = text.replace(/^#{5} (.*$)/gm, '<h5>$1</h5>');
+            text = text.replace(/^#{4} (.*$)/gm, '<h4>$1</h4>');
+            text = text.replace(/^#{3} (.*$)/gm, '<h3>$1</h3>');
+            text = text.replace(/^#{2} (.*$)/gm, '<h2>$1</h2>');
+            text = text.replace(/^#{1} (.*$)/gm,  '<h1>$1</h1>');
+
+            text = text.replace(/^-{3,}$/gm, '<hr style="border:none;border-top:1px solid rgba(0,0,0,0.2);margin:20px 0">');
+
+            text = text.replace(/^> (.*$)/gm,
+                '<blockquote style="border-left:3px solid rgba(0,0,0,0.2);padding-left:10px;margin:10px 0">$1</blockquote>');
+
+            text = text.replace(/((?:^[*\-+] .*$\n?)+)/gm, block => {
+                const items = block.trim().replace(/^[*\-+] (.*$)/gm, '<li>$1</li>');
+                return `<ul>${items}</ul>`;
+            });
+            text = text.replace(/((?:^\d+\. .*$\n?)+)/gm, block => {
+                const items = block.trim().replace(/^\d+\. (.*$)/gm, '<li>$1</li>');
+                return `<ol>${items}</ol>`;
+            });
+
+            // ── 3. 段落包裹 ────────────────────────────────────────────────
+            const blockTags = /^<(h[1-6]|ul|ol|li|blockquote|pre|hr|img)/;
+            text = text.split('\n').map(line =>
+                (line.trim() === '' || blockTags.test(line.trim())) ? line : `<p>${line}</p>`
+            ).join('\n');
+            text = text.replace(/<p>\s*<\/p>/g, '');
+
+            // ── 4. ★ 内联样式最后处理，此时所有块级 HTML 已就位 ────────────
+            //    只处理标签内部的文本节点，不破坏 HTML 属性里的内容
+            const applyInline = (html) => {
+                // 用占位符保护 HTML 标签本身，只对标签之间的文本做内联替换
+                const tags = [];
+                const tagPlaceholder = (i) => `\uE002TAG${i}\uE003`;
+                html = html.replace(/<[^>]+>/g, m => {
+                    const i = tags.length;
+                    tags.push(m);
+                    return tagPlaceholder(i);
+                });
+
+                // 图片先于链接
+                html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,
+                    '<img src="$2" alt="$1" style="max-width:100%;height:auto;margin:10px 0">');
+                html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
+                    '<a href="$2" target="_blank">$1</a>');
+
+                html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+                html = html.replace(/\*\*(.*?)\*\*/g,     '<strong>$1</strong>');
+                html = html.replace(/__(.*?)__/g,          '<strong>$1</strong>');
+                html = html.replace(/\*(.*?)\*/g,          '<em>$1</em>');
+                html = html.replace(/_(.*?)_/g,            '<em>$1</em>');
+
+                // 还原 HTML 标签
+                html = html.replace(/\uE002TAG(\d+)\uE003/g, (_, i) => tags[+i]);
+                return html;
+            };
+
+            text = applyInline(text);
+
+            // ── 5. 还原代码占位符 ──────────────────────────────────────────
+            text = text.replace(placeholderRe, (_, i) => codeBlocks[+i]);
+
             return text;
         }
 
