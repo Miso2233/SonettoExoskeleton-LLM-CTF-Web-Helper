@@ -593,6 +593,11 @@
                 labels[label] = value;
             });
             
+            // 清空所有输入框
+            inputElements.forEach(element => {
+                element.value = '';
+            });
+            
             // 显示等待状态
             document.getElementById('loading-status').style.display = 'flex';
             
