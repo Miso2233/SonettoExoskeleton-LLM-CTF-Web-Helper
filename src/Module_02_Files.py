@@ -108,4 +108,5 @@ def generate_soul(mode):
         case _:
             raise ValueError(f"Invalid mode: {mode}")
     out += open('soul/format.md', 'r', encoding='utf-8').read()
+    out += open('soul/format.md', 'r', encoding='utf-8').read()
     return out

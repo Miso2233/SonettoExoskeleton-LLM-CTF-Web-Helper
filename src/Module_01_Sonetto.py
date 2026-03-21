@@ -220,7 +220,7 @@ class Sonetto:
         Returns:
             筛选后的模型名称列表
         """
-        allowed_keywords = ['MiMo', 'MiniMax', 'DeepSeek', 'Qwen', 'GLM']
+        allowed_keywords = ['MiMo', 'MiniMax', 'DeepSeek', 'Qwen', 'GLM', 'ChatGPT']
         
         filtered = []
         for model in model_names:
