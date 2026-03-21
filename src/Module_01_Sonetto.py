@@ -57,6 +57,8 @@ class Sonetto:
         self.conversation_history = []
 
         self.mode = DEFAULT_MODE
+
+        self.allowed_keywords = config.get('model_filter_keywords', ['MiMo', 'MiniMax', 'DeepSeek', 'Qwen', 'z-ai', 'openai'])
         
         # 模型选择相关 - 使用可用模型列表的第一项作为默认值
         available_models = self.get_available_models()
@@ -209,8 +211,7 @@ class Sonetto:
             print(f"获取模型列表时出错: {type(e).__name__}: {e}")
             raise e
     
-    @staticmethod
-    def _filter_models(model_names: list) -> list:
+    def _filter_models(self, model_names: list) -> list:
         """
         筛选模型名称，只保留符合条件的模型，并进行排序
         
@@ -220,12 +221,10 @@ class Sonetto:
         Returns:
             筛选后的模型名称列表
         """
-        allowed_keywords = ['MiMo', 'MiniMax', 'DeepSeek', 'Qwen', 'GLM', 'ChatGPT']
-        
         filtered = []
         for model in model_names:
             model_lower: str = model.lower()
-            for keyword in allowed_keywords:
+            for keyword in self.allowed_keywords:
                 if model_lower.startswith(keyword.lower()):
                     filtered.append(model)
                     break

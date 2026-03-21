@@ -2,5 +2,12 @@
   "api_key": "your_api_key_here",
   "base_url": "https://api.deepseek.com/v1",
   "modes_example": ["coach", "copilot", "boost", "full_power"],
-  "mode": "copilot"
+  "mode": "copilot",
+  "model_filter_keywords": [
+    "MiMo",
+    "MiniMax",
+    "DeepSeek",
+    "Qwen",
+    "z-ai"
+  ]
 }
