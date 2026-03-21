@@ -1,12 +1,12 @@
 """
-DeepSeek API客户端模块
+大模型API客户端模块
 
-该模块包含与DeepSeek大模型通信相关的类和方法，负责发送请求和处理响应。
+该模块包含与LLM通信相关的类和方法，负责发送请求和处理响应。
 """
 
 import json
 from openai import OpenAI
-from src.file_utils import generate_soul
+from src.Module_02_Files import generate_soul
 
 class MODES:
     COACH = "coach"
@@ -28,9 +28,9 @@ TEMPERATURE_OF_MODE = {
 
 class Sonetto:
     """
-    DeepSeek大模型客户端类
+    Sonetto类
     
-    封装了与DeepSeek大模型通信的所有功能，包括：
+    封装了与大模型通信的所有功能，包括：
     - 上下文管理
     - 发送请求
     - 会话管理
@@ -57,6 +57,10 @@ class Sonetto:
         self.conversation_history = []
 
         self.mode = DEFAULT_MODE
+        
+        # 模型选择相关 - 使用可用模型列表的第一项作为默认值
+        available_models = self.get_available_models()
+        self.current_model = available_models[0] if available_models else 'deepseek-chat'
     
     def get_response(self, prompt: str) -> str:
         """
@@ -73,7 +77,7 @@ class Sonetto:
         
         # 调用DeepSeek API
         response = self.client.chat.completions.create(
-            model="deepseek-chat",  # 使用DeepSeek的聊天模型
+            model=self.current_model,
             messages=self.conversation_history,
             temperature=TEMPERATURE_OF_MODE[self.mode],
             max_tokens=MAX_OUTPUT_TOKENS
@@ -181,3 +185,78 @@ class Sonetto:
         estimated_tokens += 100
         
         return estimated_tokens / MAX_INPUT_TOKENS
+    
+    def get_available_models(self) -> list:
+        """
+        获取所有可用模型的名称列表（筛选后的）
+        
+        Returns:
+            可用模型名称的列表
+        """
+        try:
+            models = self.client.models.list()
+            print(f"API返回的模型列表: {models}")
+            
+            if hasattr(models, 'data'):
+                model_names = [model.id for model in models.data]
+                # print(f"解析后的模型名称: {model_names}")
+                if model_names:
+                    filtered_models = self._filter_models(model_names)
+                    # print(f"筛选后的模型名称: {filtered_models}")
+                    if filtered_models:
+                        return filtered_models
+        except Exception as e:
+            print(f"获取模型列表时出错: {type(e).__name__}: {e}")
+            raise e
+    
+    @staticmethod
+    def _filter_models(model_names: list) -> list:
+        """
+        筛选模型名称，只保留符合条件的模型，并进行排序
+        
+        Args:
+            model_names: 原始模型名称列表
+            
+        Returns:
+            筛选后的模型名称列表
+        """
+        allowed_keywords = ['MiMo', 'MiniMax', 'DeepSeek', 'Qwen', 'GLM']
+        
+        filtered = []
+        for model in model_names:
+            model_lower: str = model.lower()
+            for keyword in allowed_keywords:
+                if model_lower.startswith(keyword.lower()):
+                    filtered.append(model)
+                    break
+        
+        # 如果筛选后没有结果，返回备选列表
+        if not filtered:
+            print("筛选后无模型，使用备选列表")
+            raise Exception("筛选后无模型")
+        
+        return sorted(filtered)
+    
+    def switch_model(self, model_name: str) -> bool:
+        """
+        切换到指定的模型
+        
+        Args:
+            model_name: 要切换到的模型名称
+            
+        Returns:
+            是否切换成功
+        """
+        try:
+            if not model_name:
+                print("模型名称不能为空")
+                return False
+            
+            # 更新当前模型
+            self.current_model = model_name
+            
+            print(f"模型已切换为: {model_name}")
+            return True
+        except Exception as e:
+            print(f"切换模型时出错: {e}")
+            return False

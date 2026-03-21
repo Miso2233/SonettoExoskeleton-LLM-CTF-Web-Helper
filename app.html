@@ -16,7 +16,15 @@
                     加载中...
                 </div>
                 <div id="sonetto-info" class="sonetto-info">
-                    <span class="info-value" title="底层模型">deepseek-chat</span>
+                    <div class="model-selector">
+                        <div class="model-selector-header" id="model-selector-header" title="底层模型">
+                            <span id="current-model">加载中...</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="model-dropdown" id="model-dropdown">
+                            <div class="model-option-loading">加载模型列表...</div>
+                        </div>
+                    </div>
                     <div class="token-indicator" title="当前token占用比例">
                         <span class="token-label">token</span>
                         <div class="token-ring-container">
@@ -77,70 +85,64 @@
         const MAX_RECONNECT_ATTEMPTS = 5;
         const RECONNECT_DELAY = 3000;
 
-        // 读取和解析communication.md文件
+        // 读取和解析 communication.md 文件
         async function loadCommunicationFile() {
             try {
+                console.log('loadCommunicationFile 被调用');
                 // 添加时间戳参数，确保每次请求都获取最新文件
                 const timestamp = new Date().getTime();
                 
-                // 发送HEAD请求获取文件修改时间
-                const headResponse = await fetch(`communication.md?timestamp=${timestamp}`, { method: 'HEAD' });
-                if (!headResponse.ok) {
-                    throw new Error('无法读取文件信息');
+                // 直接获取文件内容（不使用 HEAD 请求，避免文件时间戳问题）
+                const response = await fetch(`communication.md?timestamp=${timestamp}`);
+                if (!response.ok) {
+                    throw new Error('无法读取文件');
                 }
                 
-                // 获取文件修改时间
-                const lastModifiedHeader = headResponse.headers.get('Last-Modified');
-                const currentModified = lastModifiedHeader ? new Date(lastModifiedHeader).getTime() : Date.now();
+                const content = await response.text();
+                console.log('文件内容长度:', content.length);
                 
-                // 只有当文件修改时间发生变化时才更新页面
-                if (currentModified !== lastModifiedTime) {
-                    // 获取文件内容
-                    const response = await fetch(`communication.md?timestamp=${timestamp}`);
-                    if (!response.ok) {
-                        throw new Error('无法读取文件');
-                    }
-                    
-                    const content = await response.text();
-                    
-                    // 更新页面内容
-                    parseCommunicationContent(content);
-                    
-                    // 检查是否是初始会话内容或空内容
-                    const isInitialContent = content.trim().includes('请提供题目标题') || content.trim().includes('请点击"下一步"按钮开始解题过程');
-                    
-                    // 检查是否包含模型的实际回答（包含"### 下一步"）
-                    const hasActualResponse = content.trim().includes('### 下一步');
-                    
-                    // 检查是否有具体内容（不是简单的初始提示）
-                    const hasContent = content.trim().length > 50; // 简单判断内容长度
-                    
-                    // 只有当内容包含模型的实际回答且有具体内容时，才隐藏等待状态
-                    if (!hasActualResponse || !content.trim() || isInitialContent || !hasContent) {
-                        document.getElementById('loading-status').style.display = 'flex';
-                    } else {
-                        // 隐藏等待状态
-                        document.getElementById('loading-status').style.display = 'none';
-                    }
-                    
-                    // 更新修改时间
-                    lastModifiedTime = currentModified;
-                    
-                    console.log('文件内容已更新，修改时间:', new Date(currentModified).toLocaleString());
-                } else {
-                    console.log('文件未变化，跳过刷新');
+                // 检查内容是否发生变化
+                if (content === window.lastCommunicationContent) {
+                    console.log('文件内容未变化，跳过刷新');
+                    return;
                 }
+                
+                // 保存当前内容
+                window.lastCommunicationContent = content;
+                
+                console.log('文件内容已更新，开始刷新页面');
+                console.log('文件内容预览:', content.substring(0, 200));
+                
+                // 更新页面内容
+                parseCommunicationContent(content);
+                
+                // 检查是否有实际响应内容
+                const hasActualResponse = content.trim().includes('### 下一步');
+                const hasContent = content.trim().length > 50;
+                
+                console.log('加载状态判断 - hasActualResponse:', hasActualResponse, 'hasContent:', hasContent);
+                
+                // 只有检测到实际内容时，才隐藏加载状态
+                if (hasActualResponse && hasContent) {
+                    console.log('检测到文件内容，隐藏加载状态');
+                    document.getElementById('loading-status').style.display = 'none';
+                }
+                
+                // 更新修改时间
+                lastModifiedTime = Date.now();
+                
+                console.log('文件内容已处理');
             } catch (error) {
+                console.error('加载文件错误:', error);
                 // 如果文件不存在，尝试创建文件
-                if (error.message.includes('404') || error.message.includes('无法读取文件信息')) {
-                    console.log('communication.md文件不存在，尝试创建...');
+                if (error.message.includes('404') || error.message.includes('无法读取文件')) {
+                    console.log('communication.md 文件不存在，尝试创建...');
                     await createCommunicationFile();
                     // 重新尝试加载文件
                     await loadCommunicationFile();
                 } else {
-                    document.getElementById('next-step-content').textContent = '错误：无法加载communication.md文件';
-                    document.getElementById('input-sections').textContent = '请确保communication.md文件存在';
-                    console.error('加载文件错误:', error);
+                    document.getElementById('next-step-content').textContent = '错误：无法加载 communication.md 文件';
+                    document.getElementById('input-sections').textContent = '请确保 communication.md 文件存在';
                 }
             }
         }
@@ -233,8 +235,10 @@
             return text;
         }
 
-        // 解析communication.md内容
+        // 解析 communication.md 内容
         function parseCommunicationContent(content) {
+            console.log('开始解析 communication.md 内容，长度:', content.length);
+            
             // 保存用户输入的内容
             const userInputs = {};
             const existingTextareas = document.querySelectorAll('.input-textarea');
@@ -244,6 +248,7 @@
             
             // 分割内容，找到所有三级标题
             const sections = content.split('### ');
+            console.log('分割后的 sections 数量:', sections.length);
             
             // 找到"下一步"部分
             let nextStepContent = '';
@@ -251,51 +256,66 @@
             const inputSections = [];
 
             for (const section of sections) {
+                console.log('处理 section:', section.substring(0, 50));
                 if (section.startsWith('下一步')) {
                     // 提取"下一步"内容
                     nextStepContent = section.substring(3).trim();
                     foundNextStep = true;
+                    console.log('找到"下一步"部分，内容长度:', nextStepContent.length);
                 } else if (foundNextStep && section.trim()) {
                     // 提取后续的三级标题及其内容
                     const lines = section.split('\n');
                     const title = lines[0].trim();
+                    console.log('找到输入部分:', title);
                     inputSections.push(title);
                 }
             }
 
-            // 显示"下一步"内容（使用Markdown渲染）
+            // 显示"下一步"内容（使用 Markdown 渲染）
             const renderedContent = renderMarkdown(nextStepContent);
-            document.getElementById('next-step-content').innerHTML = renderedContent;
+            const nextStepElement = document.getElementById('next-step-content');
+            if (nextStepElement) {
+                nextStepElement.innerHTML = renderedContent;
+                console.log('next-step-content 已更新，渲染后长度:', renderedContent.length);
+            } else {
+                console.error('找不到 next-step-content 元素');
+            }
 
             // 生成输入区域
             const inputSectionsContainer = document.getElementById('input-sections');
-            inputSectionsContainer.innerHTML = '';
-
-            if (inputSections.length === 0) {
-                inputSectionsContainer.innerHTML = '<p>请等待-模型即将就绪</p>';
+            if (inputSectionsContainer) {
+                inputSectionsContainer.innerHTML = '';
+                
+                if (inputSections.length === 0) {
+                    inputSectionsContainer.innerHTML = '<p>请等待 - 模型即将就绪</p>';
+                    console.log('没有输入部分，显示等待提示');
+                } else {
+                    inputSections.forEach(title => {
+                        const sectionDiv = document.createElement('div');
+                        sectionDiv.className = 'input-section';
+                        
+                        const label = document.createElement('label');
+                        label.className = 'input-label';
+                        label.textContent = title;
+                        
+                        const textarea = document.createElement('textarea');
+                        textarea.className = 'input-textarea';
+                        const textareaId = `input-${title.toLowerCase().replace(/\s+/g, '-')}`;
+                        textarea.id = textareaId;
+                        
+                        // 恢复用户输入的内容
+                        if (userInputs[textareaId]) {
+                            textarea.value = userInputs[textareaId];
+                        }
+                        
+                        sectionDiv.appendChild(label);
+                        sectionDiv.appendChild(textarea);
+                        inputSectionsContainer.appendChild(sectionDiv);
+                    });
+                    console.log('输入区域已更新，共', inputSections.length, '个输入框');
+                }
             } else {
-                inputSections.forEach(title => {
-                    const sectionDiv = document.createElement('div');
-                    sectionDiv.className = 'input-section';
-                    
-                    const label = document.createElement('label');
-                    label.className = 'input-label';
-                    label.textContent = title;
-                    
-                    const textarea = document.createElement('textarea');
-                    textarea.className = 'input-textarea';
-                    const textareaId = `input-${title.toLowerCase().replace(/\s+/g, '-')}`;
-                    textarea.id = textareaId;
-                    
-                    // 恢复用户输入的内容
-                    if (userInputs[textareaId]) {
-                        textarea.value = userInputs[textareaId];
-                    }
-                    
-                    sectionDiv.appendChild(label);
-                    sectionDiv.appendChild(textarea);
-                    inputSectionsContainer.appendChild(sectionDiv);
-                });
+                console.error('找不到 input-sections 元素');
             }
         }
 
@@ -387,6 +407,9 @@
                     wsReconnectAttempts = 0;
                     // 更新连接状态显示
                     updateConnectionStatus('WebSocket连接已建立');
+                    // 重新获取模型列表
+                    console.log('WebSocket连接成功，重新获取模型列表');
+                    getModels();
                 };
                 
                 ws.onmessage = function(event) {
@@ -420,28 +443,28 @@
             }
         }
         
-        // 处理WebSocket消息
+        // 处理 WebSocket 消息
         function handleWebSocketMessage(event) {
+            console.log('收到 WebSocket 原始消息:', event.data);
             try {
                 const data = JSON.parse(event.data);
                 const messageType = data.type;
                 const messageData = data.data;
                 
-                console.log('收到WebSocket消息:', messageType, messageData);
+                console.log('解析后的 WebSocket 消息:', messageType, messageData);
                 
                 // 根据消息类型处理
                 switch (messageType) {
                     case 'next_step':
-                        // 处理下一步响应
-                        document.getElementById('loading-status').style.display = 'none';
-                        // 重新加载文件内容
-                        loadCommunicationFile();
+                        console.log('处理 next_step 消息，messageData:', messageData);
+                        // 处理下一步响应 - 不立即隐藏加载状态，等待文件轮询检测到内容后自动隐藏
+                        // 这样可以确保内容和加载状态同步
+                        console.log('WebSocket 响应已收到，等待文件轮询更新内容');
                         break;
                     case 'restart':
-                        // 处理重新开始响应
-                        document.getElementById('loading-status').style.display = 'none';
-                        // 重新加载文件内容
-                        loadCommunicationFile();
+                        console.log('处理 restart 消息');
+                        // 处理重新开始响应 - 同样等待文件轮询
+                        console.log('WebSocket 响应已收到，等待文件轮询更新内容');
                         break;
                     case 'exit':
                         // 处理结束响应
@@ -459,6 +482,17 @@
                         // 重新加载Sonetto信息
                         loadSonettoInfo();
                         console.log('模型模式切换成功:', messageData.message);
+                        break;
+                    case 'get_models':
+                        // 处理获取模型列表响应
+                        handleGetModelsResponse(messageData);
+                        break;
+                    case 'switch_model':
+                        // 处理模型切换响应
+                        document.getElementById('loading-status').style.display = 'none';
+                        // 更新当前模型显示
+                        document.getElementById('current-model').textContent = messageData.model;
+                        console.log('模型切换成功:', messageData.message);
                         break;
                     case 'error':
                         // 处理错误响应
@@ -567,6 +601,133 @@
             }
         }
         
+        // 初始化模型选择器
+        function initModelSelector() {
+            const header = document.getElementById('model-selector-header');
+            const dropdown = document.getElementById('model-dropdown');
+            const arrow = header.querySelector('.dropdown-arrow');
+            
+            if (!header || !dropdown || !arrow) {
+                console.error('找不到模型选择器的DOM元素');
+                return;
+            }
+            
+            console.log('初始化模型选择器');
+            
+            // 点击头部展开/收起下拉菜单
+            header.addEventListener('click', function() {
+                console.log('点击模型选择器头部');
+                dropdown.classList.toggle('show');
+                arrow.classList.toggle('rotate');
+            });
+            
+            // 点击页面其他地方关闭下拉菜单
+            document.addEventListener('click', function(event) {
+                if (!header.contains(event.target)) {
+                    dropdown.classList.remove('show');
+                    arrow.classList.remove('rotate');
+                }
+            });
+            
+            // 首次加载模型列表 - 先显示默认列表，等待WebSocket连接后更新
+            handleGetModelsResponse({
+                models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+                current_model: 'deepseek-chat'
+            });
+        }
+        
+        // 获取模型列表
+        function getModels() {
+            console.log('获取模型列表');
+            const dropdown = document.getElementById('model-dropdown');
+            dropdown.innerHTML = '<div class="model-option-loading">加载模型列表...</div>';
+            
+            // 优先使用WebSocket
+            if (!sendButtonClick('get_models')) {
+                // WebSocket不可用，显示默认模型
+                handleGetModelsResponse({
+                    models: ['deepseek-chat'],
+                    current_model: 'deepseek-chat'
+                });
+            }
+        }
+        
+        // 处理获取模型列表响应
+        function handleGetModelsResponse(data) {
+            console.log('收到模型列表:', data);
+            console.log('data.models:', data.models);
+            console.log('data.current_model:', data.current_model);
+            
+            const dropdown = document.getElementById('model-dropdown');
+            const currentModelElement = document.getElementById('current-model');
+            
+            if (!dropdown) {
+                console.error('找不到 model-dropdown 元素');
+                return;
+            }
+            
+            // 更新当前模型显示
+            if (data.current_model) {
+                currentModelElement.textContent = data.current_model;
+                console.log('当前模型显示已更新为:', data.current_model);
+            }
+            
+            // 清空下拉菜单
+            dropdown.innerHTML = '';
+            console.log('下拉菜单已清空');
+            
+            // 添加模型选项
+            if (data.models && data.models.length > 0) {
+                console.log('开始添加模型选项，共', data.models.length, '个');
+                data.models.forEach((model, index) => {
+                    console.log(`添加模型 ${index + 1}:`, model);
+                    const option = document.createElement('div');
+                    option.className = 'model-option';
+                    option.dataset.model = model;
+                    option.textContent = model;
+                    
+                    if (model === data.current_model) {
+                        option.classList.add('selected');
+                        console.log('标记为选中:', model);
+                    }
+                    
+                    option.addEventListener('click', function() {
+                        const selectedModel = this.getAttribute('data-model');
+                        console.log('点击模型选项:', selectedModel);
+                        switchModel(selectedModel);
+                        
+                        // 关闭下拉菜单
+                        dropdown.classList.remove('show');
+                        const arrow = document.getElementById('model-selector-header').querySelector('.dropdown-arrow');
+                        arrow.classList.remove('rotate');
+                    });
+                    
+                    dropdown.appendChild(option);
+                });
+                console.log('所有模型选项已添加');
+            } else {
+                console.error('无可用模型');
+                dropdown.innerHTML = '<div class="model-option-error">无可用模型</div>';
+            }
+        }
+        
+        // 切换模型
+        function switchModel(model) {
+            console.log(`切换模型为: ${model}`);
+            
+            // 显示加载状态
+            document.getElementById('loading-status').style.display = 'flex';
+            
+            // 优先使用WebSocket
+            if (sendButtonClick('switch_model', { model: model })) {
+                // WebSocket发送成功，等待响应
+            } else {
+                // WebSocket不可用
+                alert('WebSocket未连接，无法切换模型');
+                document.getElementById('loading-status').style.display = 'none';
+            }
+        }
+        
         // 初始化
         window.onload = function() {
             // 首次加载时，强制刷新文件内容
@@ -577,6 +738,9 @@
             
             // 初始化WebSocket连接
             initWebSocket();
+            
+            // 初始化模型选择器
+            initModelSelector();
             
             // 初始化模式选择器
             initModeSelector();
