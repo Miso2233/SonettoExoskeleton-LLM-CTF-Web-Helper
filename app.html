@@ -92,7 +92,7 @@
                 // 添加时间戳参数，确保每次请求都获取最新文件
                 const timestamp = new Date().getTime();
                 
-                // 直接获取文件内容（不使用HEAD请求，避免文件时间戳问题）
+                // 直接获取文件内容（不使用 HEAD 请求，避免文件时间戳问题）
                 const response = await fetch(`communication.md?timestamp=${timestamp}`);
                 if (!response.ok) {
                     throw new Error('无法读取文件');
@@ -100,6 +100,17 @@
                 
                 const content = await response.text();
                 console.log('文件内容长度:', content.length);
+                
+                // 检查内容是否发生变化
+                if (content === window.lastCommunicationContent) {
+                    console.log('文件内容未变化，跳过刷新');
+                    return;
+                }
+                
+                // 保存当前内容
+                window.lastCommunicationContent = content;
+                
+                console.log('文件内容已更新，开始刷新页面');
                 console.log('文件内容预览:', content.substring(0, 200));
                 
                 // 更新页面内容

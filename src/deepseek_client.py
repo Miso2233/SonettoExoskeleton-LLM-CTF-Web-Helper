@@ -212,7 +212,7 @@ class Sonetto:
     @staticmethod
     def _filter_models(model_names: list) -> list:
         """
-        筛选模型名称，只保留符合条件的模型
+        筛选模型名称，只保留符合条件的模型，并进行排序
         
         Args:
             model_names: 原始模型名称列表
@@ -235,7 +235,7 @@ class Sonetto:
             print("筛选后无模型，使用备选列表")
             raise Exception("筛选后无模型")
         
-        return filtered
+        return sorted(filtered)
     
     def switch_model(self, model_name: str) -> bool:
         """
