@@ -39,7 +39,7 @@ class CommunicationManager:
         except FileNotFoundError:
             return ""
     
-    def write(self, content, title="模型回复"):
+    def write(self, content, title="下一步"):
         """
         将内容写入communication.md文件，每次写入前先清空文件
         
