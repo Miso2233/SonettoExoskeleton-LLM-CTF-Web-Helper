@@ -9,16 +9,22 @@ from openai import OpenAI
 from src.file_utils import generate_soul
 
 class MODES:
-    BOOST = "boost"
     COACH = "coach"
     COPILOT = "copilot"
+    BOOST = "boost"
     FULL_POWER = "full_power"
 
 DEFAULT_MODE = json.load(open('config.json', 'r', encoding='utf-8'))['mode']
 
 MAX_OUTPUT_TOKENS = 4096
-
 MAX_INPUT_TOKENS = 64000
+
+TEMPERATURE_OF_MODE = {
+    MODES.COACH : 0.2,
+    MODES.COPILOT : 0.15,
+    MODES.BOOST : 0.1,
+    MODES.FULL_POWER : 0.05
+}
 
 class Sonetto:
     """
@@ -69,7 +75,7 @@ class Sonetto:
         response = self.client.chat.completions.create(
             model="deepseek-chat",  # 使用DeepSeek的聊天模型
             messages=self.conversation_history,
-            temperature=0.7,
+            temperature=TEMPERATURE_OF_MODE[self.mode],
             max_tokens=MAX_OUTPUT_TOKENS
         )
         
