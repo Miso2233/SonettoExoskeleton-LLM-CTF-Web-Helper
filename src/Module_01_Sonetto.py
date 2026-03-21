@@ -1,12 +1,12 @@
 """
-DeepSeek API客户端模块
+大模型API客户端模块
 
-该模块包含与DeepSeek大模型通信相关的类和方法，负责发送请求和处理响应。
+该模块包含与LLM通信相关的类和方法，负责发送请求和处理响应。
 """
 
 import json
 from openai import OpenAI
-from src.file_utils import generate_soul
+from src.Module_02_Files import generate_soul
 
 class MODES:
     COACH = "coach"
@@ -28,9 +28,9 @@ TEMPERATURE_OF_MODE = {
 
 class Sonetto:
     """
-    DeepSeek大模型客户端类
+    Sonetto类
     
-    封装了与DeepSeek大模型通信的所有功能，包括：
+    封装了与大模型通信的所有功能，包括：
     - 上下文管理
     - 发送请求
     - 会话管理

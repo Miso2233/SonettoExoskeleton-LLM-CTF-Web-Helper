@@ -11,8 +11,8 @@ import websockets
 import json
 import threading
 import time
-from src.file_utils import communication_manager, save_writeup
-from src.deepseek_client import Sonetto
+from src.Module_02_Files import communication_manager, save_writeup
+from src.Module_01_Sonetto import Sonetto
 
 class WebSocketServer:
     """

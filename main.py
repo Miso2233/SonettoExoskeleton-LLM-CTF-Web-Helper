@@ -6,9 +6,9 @@ Sonetto CTF Web 解题助手
 
 import os
 import time
-from src.deepseek_client import Sonetto
-from src.file_utils import communication_manager, save_writeup
-from src.websocket_server import WebSocketServer
+from src.Module_01_Sonetto import Sonetto
+from src.Module_02_Files import communication_manager, save_writeup
+from src.Module_03_WebSocketServer import WebSocketServer
 
 def main():
     print("=== Sonetto CTF Web 解题助手 ===")
