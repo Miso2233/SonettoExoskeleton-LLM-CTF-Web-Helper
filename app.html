@@ -246,9 +246,38 @@
                 userInputs[textarea.id] = textarea.value;
             });
             
-            // 分割内容，找到所有三级标题
-            const sections = content.split('### ');
-            console.log('分割后的 sections 数量:', sections.length);
+            // 按行分割，然后精确识别三级标题（### 开头，但不是 ####）
+            const lines = content.split('\n');
+            const sections = [];
+            let currentSection = [];
+            let currentTitle = '';
+            
+            for (const line of lines) {
+                // 检查是否是三级标题（### 开头但后面不是 #）
+                if (/^### (?!#)/.test(line)) {
+                    // 保存之前的 section
+                    if (currentTitle || currentSection.length > 0) {
+                        sections.push({
+                            title: currentTitle,
+                            content: currentSection.join('\n')
+                        });
+                    }
+                    // 开始新的 section，提取标题（去掉 ### 前缀）
+                    currentTitle = line.replace(/^### /, '').trim();
+                    currentSection = [];
+                } else {
+                    currentSection.push(line);
+                }
+            }
+            // 添加最后一个 section
+            if (currentTitle || currentSection.length > 0) {
+                sections.push({
+                    title: currentTitle,
+                    content: currentSection.join('\n')
+                });
+            }
+            
+            console.log('解析后的 sections 数量:', sections.length);
             
             // 找到"下一步"部分
             let nextStepContent = '';
@@ -256,18 +285,19 @@
             const inputSections = [];
 
             for (const section of sections) {
-                console.log('处理 section:', section.substring(0, 50));
-                if (section.startsWith('下一步')) {
+                console.log('处理 section:', section.title);
+                if (section.title === '下一步') {
                     // 提取"下一步"内容
-                    nextStepContent = section.substring(3).trim();
+                    nextStepContent = section.content.trim();
                     foundNextStep = true;
                     console.log('找到"下一步"部分，内容长度:', nextStepContent.length);
-                } else if (foundNextStep && section.trim()) {
+                } else if (foundNextStep && section.title.trim()) {
                     // 提取后续的三级标题及其内容
-                    const lines = section.split('\n');
-                    const title = lines[0].trim();
-                    console.log('找到输入部分:', title);
-                    inputSections.push(title);
+                    console.log('找到输入部分:', section.title);
+                    inputSections.push({
+                        title: section.title,
+                        content: section.content
+                    });
                 }
             }
 
@@ -290,17 +320,17 @@
                     inputSectionsContainer.innerHTML = '<p>请等待 - 模型即将就绪</p>';
                     console.log('没有输入部分，显示等待提示');
                 } else {
-                    inputSections.forEach(title => {
+                    inputSections.forEach(section => {
                         const sectionDiv = document.createElement('div');
                         sectionDiv.className = 'input-section';
                         
                         const label = document.createElement('label');
                         label.className = 'input-label';
-                        label.textContent = title;
+                        label.textContent = section.title;
                         
                         const textarea = document.createElement('textarea');
                         textarea.className = 'input-textarea';
-                        const textareaId = `input-${title.toLowerCase().replace(/\s+/g, '-')}`;
+                        const textareaId = `input-${section.title.toLowerCase().replace(/\s+/g, '-')}`;
                         textarea.id = textareaId;
                         
                         // 恢复用户输入的内容
