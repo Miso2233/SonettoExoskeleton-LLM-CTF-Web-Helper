@@ -80,6 +80,10 @@ class WebSocketServer:
                 await self.handle_custom_function(websocket, data)
             elif message_type == 'switch_mode':
                 await self.handle_switch_mode(websocket, data)
+            elif message_type == 'get_models':
+                await self.handle_get_models(websocket)
+            elif message_type == 'switch_model':
+                await self.handle_switch_model(websocket, data)
             else:
                 await self.send_response(websocket, 'error', {'message': '未知的消息类型'})
         except json.JSONDecodeError:
@@ -244,6 +248,60 @@ class WebSocketServer:
             print(f"模型模式切换为: {mode}")
         except Exception as e:
             print(f"处理模式切换时出错: {e}")
+            await self.send_response(websocket, 'error', {'message': str(e)})
+    
+    async def handle_get_models(self, websocket):
+        """
+        处理获取可用模型列表请求
+        
+        Args:
+            websocket: WebSocket连接对象
+        """
+        try:
+            # 调用Sonetto的get_available_models方法
+            models = self.sonetto.get_available_models()
+            current_model = self.sonetto.current_model
+            
+            # 发送响应给客户端
+            await self.send_response(websocket, 'get_models', {
+                'models': models,
+                'current_model': current_model
+            })
+            print(f"获取模型列表完成，共 {len(models)} 个模型")
+        except Exception as e:
+            print(f"获取模型列表时出错: {e}")
+            await self.send_response(websocket, 'error', {'message': str(e)})
+    
+    async def handle_switch_model(self, websocket, data):
+        """
+        处理模型切换请求
+        
+        Args:
+            websocket: WebSocket连接对象
+            data: 消息数据
+        """
+        try:
+            # 获取新的模型
+            model = data.get('model')
+            
+            if not model:
+                await self.send_response(websocket, 'error', {'message': '缺少模型参数'})
+                return
+            
+            # 调用Sonetto的switch_model方法
+            success = self.sonetto.switch_model(model)
+            
+            if success:
+                # 发送响应给客户端
+                await self.send_response(websocket, 'switch_model', {
+                    'model': model,
+                    'message': '模型切换成功'
+                })
+                print(f"模型已切换为: {model}")
+            else:
+                await self.send_response(websocket, 'error', {'message': '模型切换失败'})
+        except Exception as e:
+            print(f"处理模型切换时出错: {e}")
             await self.send_response(websocket, 'error', {'message': str(e)})
     
     async def send_response(self, websocket, message_type, data):

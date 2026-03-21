@@ -16,7 +16,15 @@
                     加载中...
                 </div>
                 <div id="sonetto-info" class="sonetto-info">
-                    <span class="info-value" title="底层模型">deepseek-chat</span>
+                    <div class="model-selector">
+                        <div class="model-selector-header" id="model-selector-header" title="底层模型">
+                            <span id="current-model">加载中...</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="model-dropdown" id="model-dropdown">
+                            <div class="model-option-loading">加载模型列表...</div>
+                        </div>
+                    </div>
                     <div class="token-indicator" title="当前token占用比例">
                         <span class="token-label">token</span>
                         <div class="token-ring-container">
@@ -387,6 +395,9 @@
                     wsReconnectAttempts = 0;
                     // 更新连接状态显示
                     updateConnectionStatus('WebSocket连接已建立');
+                    // 重新获取模型列表
+                    console.log('WebSocket连接成功，重新获取模型列表');
+                    getModels();
                 };
                 
                 ws.onmessage = function(event) {
@@ -459,6 +470,17 @@
                         // 重新加载Sonetto信息
                         loadSonettoInfo();
                         console.log('模型模式切换成功:', messageData.message);
+                        break;
+                    case 'get_models':
+                        // 处理获取模型列表响应
+                        handleGetModelsResponse(messageData);
+                        break;
+                    case 'switch_model':
+                        // 处理模型切换响应
+                        document.getElementById('loading-status').style.display = 'none';
+                        // 更新当前模型显示
+                        document.getElementById('current-model').textContent = messageData.model;
+                        console.log('模型切换成功:', messageData.message);
                         break;
                     case 'error':
                         // 处理错误响应
@@ -567,6 +589,133 @@
             }
         }
         
+        // 初始化模型选择器
+        function initModelSelector() {
+            const header = document.getElementById('model-selector-header');
+            const dropdown = document.getElementById('model-dropdown');
+            const arrow = header.querySelector('.dropdown-arrow');
+            
+            if (!header || !dropdown || !arrow) {
+                console.error('找不到模型选择器的DOM元素');
+                return;
+            }
+            
+            console.log('初始化模型选择器');
+            
+            // 点击头部展开/收起下拉菜单
+            header.addEventListener('click', function() {
+                console.log('点击模型选择器头部');
+                dropdown.classList.toggle('show');
+                arrow.classList.toggle('rotate');
+            });
+            
+            // 点击页面其他地方关闭下拉菜单
+            document.addEventListener('click', function(event) {
+                if (!header.contains(event.target)) {
+                    dropdown.classList.remove('show');
+                    arrow.classList.remove('rotate');
+                }
+            });
+            
+            // 首次加载模型列表 - 先显示默认列表，等待WebSocket连接后更新
+            handleGetModelsResponse({
+                models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+                current_model: 'deepseek-chat'
+            });
+        }
+        
+        // 获取模型列表
+        function getModels() {
+            console.log('获取模型列表');
+            const dropdown = document.getElementById('model-dropdown');
+            dropdown.innerHTML = '<div class="model-option-loading">加载模型列表...</div>';
+            
+            // 优先使用WebSocket
+            if (!sendButtonClick('get_models')) {
+                // WebSocket不可用，显示默认模型
+                handleGetModelsResponse({
+                    models: ['deepseek-chat'],
+                    current_model: 'deepseek-chat'
+                });
+            }
+        }
+        
+        // 处理获取模型列表响应
+        function handleGetModelsResponse(data) {
+            console.log('收到模型列表:', data);
+            console.log('data.models:', data.models);
+            console.log('data.current_model:', data.current_model);
+            
+            const dropdown = document.getElementById('model-dropdown');
+            const currentModelElement = document.getElementById('current-model');
+            
+            if (!dropdown) {
+                console.error('找不到 model-dropdown 元素');
+                return;
+            }
+            
+            // 更新当前模型显示
+            if (data.current_model) {
+                currentModelElement.textContent = data.current_model;
+                console.log('当前模型显示已更新为:', data.current_model);
+            }
+            
+            // 清空下拉菜单
+            dropdown.innerHTML = '';
+            console.log('下拉菜单已清空');
+            
+            // 添加模型选项
+            if (data.models && data.models.length > 0) {
+                console.log('开始添加模型选项，共', data.models.length, '个');
+                data.models.forEach((model, index) => {
+                    console.log(`添加模型 ${index + 1}:`, model);
+                    const option = document.createElement('div');
+                    option.className = 'model-option';
+                    option.dataset.model = model;
+                    option.textContent = model;
+                    
+                    if (model === data.current_model) {
+                        option.classList.add('selected');
+                        console.log('标记为选中:', model);
+                    }
+                    
+                    option.addEventListener('click', function() {
+                        const selectedModel = this.getAttribute('data-model');
+                        console.log('点击模型选项:', selectedModel);
+                        switchModel(selectedModel);
+                        
+                        // 关闭下拉菜单
+                        dropdown.classList.remove('show');
+                        const arrow = document.getElementById('model-selector-header').querySelector('.dropdown-arrow');
+                        arrow.classList.remove('rotate');
+                    });
+                    
+                    dropdown.appendChild(option);
+                });
+                console.log('所有模型选项已添加');
+            } else {
+                console.error('无可用模型');
+                dropdown.innerHTML = '<div class="model-option-error">无可用模型</div>';
+            }
+        }
+        
+        // 切换模型
+        function switchModel(model) {
+            console.log(`切换模型为: ${model}`);
+            
+            // 显示加载状态
+            document.getElementById('loading-status').style.display = 'flex';
+            
+            // 优先使用WebSocket
+            if (sendButtonClick('switch_model', { model: model })) {
+                // WebSocket发送成功，等待响应
+            } else {
+                // WebSocket不可用
+                alert('WebSocket未连接，无法切换模型');
+                document.getElementById('loading-status').style.display = 'none';
+            }
+        }
+        
         // 初始化
         window.onload = function() {
             // 首次加载时，强制刷新文件内容
@@ -577,6 +726,9 @@
             
             // 初始化WebSocket连接
             initWebSocket();
+            
+            // 初始化模型选择器
+            initModelSelector();
             
             // 初始化模式选择器
             initModeSelector();
