@@ -199,21 +199,15 @@ class Sonetto:
             
             if hasattr(models, 'data'):
                 model_names = [model.id for model in models.data]
-                print(f"解析后的模型名称: {model_names}")
+                # print(f"解析后的模型名称: {model_names}")
                 if model_names:
                     filtered_models = self._filter_models(model_names)
-                    print(f"筛选后的模型名称: {filtered_models}")
+                    # print(f"筛选后的模型名称: {filtered_models}")
                     if filtered_models:
                         return filtered_models
         except Exception as e:
             print(f"获取模型列表时出错: {type(e).__name__}: {e}")
-        
-        print("使用备选模型列表")
-        return self._filter_models([
-            "deepseek-chat",
-            "deepseek-coder",
-            "deepseek-reasoner"
-        ])
+            raise e
     
     @staticmethod
     def _filter_models(model_names: list) -> list:
